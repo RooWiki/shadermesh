@@ -1,0 +1,6 @@
+export { createPlane } from './createPlane'
+export { createCube } from './createCube'
+export { createSphere } from './createSphere'
+export type { PlaneParams } from './createPlane'
+export type { CubeParams } from './createCube'
+export type { SphereParams } from './createSphere'

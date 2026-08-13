@@ -1,0 +1,138 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.modal {
+  background: #252530;
+  border: 1px solid #3a3a4a;
+  border-radius: 6px;
+  padding: 20px;
+  width: 280px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+}
+
+.title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #d0d0e8;
+  margin-bottom: 14px;
+  letter-spacing: 0.04em;
+}
+
+.typeRow {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 14px;
+}
+
+.typeBtn {
+  flex: 1;
+  padding: 5px 8px;
+  background: #1a1a26;
+  border: 1px solid #3a3a4a;
+  color: #8888a8;
+  font-size: 11px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.1s;
+}
+
+.typeBtn:hover {
+  background: #222234;
+  color: #c0c0d8;
+}
+
+.typeBtnActive {
+  background: #1e2d4a;
+  border-color: #5c7cfa;
+  color: #7aace0;
+}
+
+.fields {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.fieldLabel {
+  font-size: 11px;
+  color: #8080a0;
+  flex: 1;
+}
+
+.input {
+  width: 80px;
+  background: #141420;
+  border: 1px solid #2a2a3a;
+  color: #c8c8dc;
+  font-size: 11px;
+  padding: 4px 6px;
+  border-radius: 3px;
+  outline: none;
+  font-family: monospace;
+  transition: border-color 0.1s;
+}
+
+.input:focus {
+  border-color: #5c7cfa;
+}
+
+.hint {
+  font-size: 10px;
+  color: #50506a;
+  text-align: right;
+  padding-top: 2px;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.cancelBtn {
+  padding: 6px 14px;
+  background: #1a1a26;
+  border: 1px solid #3a3a4a;
+  color: #8888a8;
+  font-size: 11px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.1s;
+}
+
+.cancelBtn:hover {
+  background: #222234;
+  color: #c0c0d8;
+}
+
+.addBtn {
+  padding: 6px 18px;
+  background: #1e3a6a;
+  border: 1px solid #5c7cfa;
+  color: #7aace0;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.1s;
+}
+
+.addBtn:hover {
+  background: #234285;
+  color: #a0c8f0;
+}

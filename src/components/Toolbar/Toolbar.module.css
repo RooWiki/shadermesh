@@ -1,0 +1,101 @@
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 100%;
+  padding: 0 12px;
+  background: #18181e;
+  border-bottom: 1px solid #2a2a36;
+}
+
+.brand {
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: #5c7cfa;
+  white-space: nowrap;
+}
+
+.divider {
+  width: 1px;
+  height: 18px;
+  background: #2a2a3a;
+  flex-shrink: 0;
+}
+
+.addBtn {
+  padding: 4px 12px;
+  background: #1e3a6a;
+  border: 1px solid #5c7cfa;
+  color: #7aace0;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.1s;
+}
+
+.addBtn:hover {
+  background: #234285;
+  color: #a0c8f0;
+}
+
+.modeGroup {
+  display: flex;
+  gap: 2px;
+}
+
+.modeBtn {
+  padding: 4px 10px;
+  background: #1a1a26;
+  border: 1px solid #2a2a3a;
+  color: #7070a0;
+  font-size: 11px;
+  border-radius: 3px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.1s;
+}
+
+.modeBtn:hover {
+  background: #222234;
+  color: #b0b0c8;
+}
+
+.modeBtnActive {
+  background: #1e2d4a;
+  border-color: #3a5a9a;
+  color: #7aace0;
+}
+
+.modeBtnKey {
+  font-size: 9px;
+  color: #50506a;
+  background: #0e0e18;
+  padding: 1px 3px;
+  border-radius: 2px;
+  font-family: monospace;
+}
+
+.modeBtnActive .modeBtnKey {
+  color: #4a6a9a;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.statusLabel {
+  font-size: 10px;
+}
+
+.wip {
+  color: #f0a050;
+  background: rgba(240, 160, 80, 0.1);
+  padding: 3px 8px;
+  border-radius: 3px;
+  border: 1px solid rgba(240, 160, 80, 0.2);
+}

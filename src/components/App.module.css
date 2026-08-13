@@ -1,0 +1,61 @@
+.app {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #141418;
+  color: #c8c8dc;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  overflow: hidden;
+  user-select: none;
+}
+
+.toolbar {
+  height: 38px;
+  flex-shrink: 0;
+}
+
+.workArea {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+.leftPanel {
+  flex-shrink: 0;
+  overflow: hidden;
+  min-width: 160px;
+}
+
+.viewport {
+  flex: 1;
+  overflow: hidden;
+  min-width: 200px;
+}
+
+.rightPanel {
+  flex-shrink: 0;
+  overflow: hidden;
+  min-width: 160px;
+}
+
+.resizeHandle {
+  width: 4px;
+  flex-shrink: 0;
+  background: #2a2a36;
+  cursor: ew-resize;
+  transition: background 0.15s;
+  position: relative;
+  z-index: 10;
+}
+
+.resizeHandle::after {
+  content: '';
+  position: absolute;
+  inset: 0 -3px;
+}
+
+.resizeHandle:hover,
+.resizeHandle:active {
+  background: #5c7cfa;
+}
