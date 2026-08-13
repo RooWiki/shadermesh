@@ -19,6 +19,8 @@ export function Toolbar() {
   const setWireframeMode = useSceneStore(s => s.setWireframeMode)
   const gridVisible = useSceneStore(s => s.gridVisible)
   const toggleGrid = useSceneStore(s => s.toggleGrid)
+  const showNormals = useSceneStore(s => s.showNormals)
+  const toggleNormals = useSceneStore(s => s.toggleNormals)
   const [showAddModal, setShowAddModal] = useState(false)
 
   return (
@@ -40,6 +42,14 @@ export function Toolbar() {
           title="Toggle grid"
         >
           ⊞ Grid
+        </button>
+
+        <button
+          className={`${styles.wfBtn} ${showNormals ? styles.wfBtnActive : ''}`}
+          onClick={toggleNormals}
+          title="Toggle normal vectors"
+        >
+          ↑ Normals
         </button>
 
         <div className={styles.divider} />

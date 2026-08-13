@@ -15,6 +15,7 @@ export function Viewport() {
   const editorMode = useSceneStore(s => s.editorMode)
   const wireframeMode = useSceneStore(s => s.wireframeMode)
   const gridVisible = useSceneStore(s => s.gridVisible)
+  const showNormals = useSceneStore(s => s.showNormals)
 
   useEffect(() => {
     if (!containerRef.current) return
@@ -50,6 +51,10 @@ export function Viewport() {
   useEffect(() => {
     sceneManagerRef.current?.setGridVisible(gridVisible)
   }, [gridVisible])
+
+  useEffect(() => {
+    sceneManagerRef.current?.setShowNormals(showNormals)
+  }, [showNormals])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

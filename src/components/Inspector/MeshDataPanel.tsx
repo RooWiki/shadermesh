@@ -1,5 +1,6 @@
 import { getMeshStats } from '../../core/MeshData'
 import type { MeshObject } from '../../core/MeshObject'
+import { useSceneStore } from '../../state/sceneStore'
 import styles from './Inspector.module.css'
 
 function formatBytes(b: number): string {
@@ -13,6 +14,7 @@ interface Props {
 }
 
 export function MeshDataPanel({ obj }: Props) {
+  const recalculateNormals = useSceneStore(s => s.recalculateNormals)
   const stats = getMeshStats(obj.meshData)
 
   return (
@@ -52,6 +54,24 @@ export function MeshDataPanel({ obj }: Props) {
             {stats.hasColors ? '✓' : '✗'}
           </span>
         </div>
+      </div>
+
+      <div className={styles.sectionSubtitle}>Normals</div>
+      <div className={styles.actionRow}>
+        <button
+          className={styles.actionBtn}
+          onClick={() => recalculateNormals(obj.id, 'flat')}
+          title="Assign per-triangle flat normals"
+        >
+          Flat
+        </button>
+        <button
+          className={styles.actionBtn}
+          onClick={() => recalculateNormals(obj.id, 'smooth')}
+          title="Compute smooth normals (area-weighted)"
+        >
+          Smooth
+        </button>
       </div>
 
       <div className={styles.sectionSubtitle}>Memory</div>

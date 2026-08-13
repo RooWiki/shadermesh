@@ -33,6 +33,11 @@ export class SceneManager {
   private vertexPoints: THREE.Points | null = null
   private selectedVertexIndex: number | null = null
 
+  // Normal overlay
+  private normalLines: THREE.LineSegments | null = null
+  private showNormals = false
+  private readonly normalScale = 0.15
+
   private animFrameId = 0
   private container: HTMLDivElement
 
@@ -241,6 +246,16 @@ export class SceneManager {
     this.gridHelper.visible = visible
   }
 
+  setShowNormals(show: boolean) {
+    this.showNormals = show
+    if (show && this.selectedId) {
+      const obj = this.currentObjects.find(o => o.id === this.selectedId)
+      if (obj) this.buildNormalOverlay(obj.meshData)
+    } else {
+      this.clearNormalOverlay()
+    }
+  }
+
   frameSelected() {
     if (!this.selectedId) return
     const mesh = this.meshMap.get(this.selectedId)
@@ -290,10 +305,12 @@ export class SceneManager {
     mesh.add(wf)
     this.wireframeMap.set(obj.id, wf)
 
-    // Rebuild vertex overlay if this is the selected object in vertex mode
-    if (this.currentMode === 'vertex' && obj.id === this.selectedId) {
-      this.buildVertexOverlay(obj.meshData)
-      if (this.selectedVertexIndex !== null) this.updateVertexHighlight()
+    if (obj.id === this.selectedId) {
+      if (this.currentMode === 'vertex') {
+        this.buildVertexOverlay(obj.meshData)
+        if (this.selectedVertexIndex !== null) this.updateVertexHighlight()
+      }
+      if (this.showNormals) this.buildNormalOverlay(obj.meshData)
     }
 
     this.meshDataRefMap.set(obj.id, obj.meshData)
@@ -324,6 +341,7 @@ export class SceneManager {
 
     this.selectedId = id
     this.clearVertexOverlay()
+    this.clearNormalOverlay()
 
     if (id) {
       const mesh = this.meshMap.get(id)
@@ -332,9 +350,10 @@ export class SceneManager {
         const wf = this.wireframeMap.get(id)
         if (wf) (wf.material as THREE.LineBasicMaterial).copy(this.selectedWireframeMat)
       }
-      if (this.currentMode === 'vertex') {
-        const obj = this.currentObjects.find(o => o.id === id)
-        if (obj) this.buildVertexOverlay(obj.meshData)
+      const obj = this.currentObjects.find(o => o.id === id)
+      if (obj) {
+        if (this.currentMode === 'vertex') this.buildVertexOverlay(obj.meshData)
+        if (this.showNormals) this.buildNormalOverlay(obj.meshData)
       }
     }
   }
@@ -354,6 +373,43 @@ export class SceneManager {
       ? new THREE.EdgesGeometry(geometry, 5)
       : new THREE.WireframeGeometry(geometry)
     return new THREE.LineSegments(wfGeo, this.wireframeMat.clone())
+  }
+
+  // ── Normal overlay ───────────────────────────────────────────
+
+  private buildNormalOverlay(meshData: MeshData) {
+    this.clearNormalOverlay()
+    const mesh = this.meshMap.get(this.selectedId!)
+    if (!mesh || !meshData.normals) return
+
+    const { positions, normals } = meshData
+    const count = positions.length / 3
+    const pts = new Float32Array(count * 6)
+
+    for (let i = 0; i < count; i++) {
+      pts[i*6+0] = positions[i*3+0]
+      pts[i*6+1] = positions[i*3+1]
+      pts[i*6+2] = positions[i*3+2]
+      pts[i*6+3] = positions[i*3+0] + normals[i*3+0] * this.normalScale
+      pts[i*6+4] = positions[i*3+1] + normals[i*3+1] * this.normalScale
+      pts[i*6+5] = positions[i*3+2] + normals[i*3+2] * this.normalScale
+    }
+
+    const geo = new THREE.BufferGeometry()
+    geo.setAttribute('position', new THREE.BufferAttribute(pts, 3))
+    this.normalLines = new THREE.LineSegments(
+      geo,
+      new THREE.LineBasicMaterial({ color: 0x00ddff, transparent: true, opacity: 0.75, depthTest: false }),
+    )
+    mesh.add(this.normalLines)
+  }
+
+  private clearNormalOverlay() {
+    if (!this.normalLines) return
+    this.normalLines.parent?.remove(this.normalLines)
+    this.normalLines.geometry.dispose()
+    ;(this.normalLines.material as THREE.LineBasicMaterial).dispose()
+    this.normalLines = null
   }
 
   // ── Vertex overlay ───────────────────────────────────────────
@@ -486,6 +542,7 @@ export class SceneManager {
     this.resizeObserver.disconnect()
     this.renderer.domElement.removeEventListener('pointerdown', this.onPointerDown)
     this.clearVertexOverlay()
+    this.clearNormalOverlay()
     for (const [id] of this.meshMap) this.removeMeshFromScene(id)
     this.orbitControls.dispose()
     this.renderer.dispose()

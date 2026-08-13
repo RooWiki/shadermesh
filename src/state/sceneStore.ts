@@ -3,6 +3,7 @@ import { subscribeWithSelector } from 'zustand/middleware'
 import type { MeshObject, Transform } from '../core/MeshObject'
 import { createMeshObject } from '../core/MeshObject'
 import { createPlane, createCube, createSphere } from '../geometry/primitives'
+import { recalculateFlatNormals, recalculateSmoothNormals } from '../geometry/normals'
 
 export type EditorMode = 'object' | 'vertex' | 'face'
 export type WireframeMode = 'tri' | 'quad'
@@ -19,6 +20,7 @@ interface SceneState {
   editorMode: EditorMode
   wireframeMode: WireframeMode
   gridVisible: boolean
+  showNormals: boolean
   hoveredObjectId: string | null
 
   // Object management
@@ -38,11 +40,14 @@ interface SceneState {
   // Vertex editing
   selectVertex: (index: number | null) => void
   updateVertexPosition: (objectId: string, index: number, position: [number, number, number]) => void
+  updateVertexNormal: (objectId: string, index: number, normal: [number, number, number]) => void
+  recalculateNormals: (objectId: string, type: 'flat' | 'smooth') => void
 
-  // Mode
+  // Mode / display
   setEditorMode: (mode: EditorMode) => void
   setWireframeMode: (mode: WireframeMode) => void
   toggleGrid: () => void
+  toggleNormals: () => void
 
   // Utility
   getObject: (id: string) => MeshObject | undefined
@@ -57,6 +62,7 @@ export const useSceneStore = create<SceneState>()(
     editorMode: 'object',
     wireframeMode: 'tri',
     gridVisible: true,
+    showNormals: false,
     hoveredObjectId: null,
 
     addPlane: (params = {}) => {
@@ -111,6 +117,29 @@ export const useSceneStore = create<SceneState>()(
       }))
     },
 
+    updateVertexNormal: (objectId, index, normal) => {
+      set(s => ({
+        objects: s.objects.map(o => {
+          if (o.id !== objectId || !o.meshData.normals) return o
+          const normals = o.meshData.normals
+          normals[index * 3] = normal[0]
+          normals[index * 3 + 1] = normal[1]
+          normals[index * 3 + 2] = normal[2]
+          return { ...o, meshData: { ...o.meshData } }
+        }),
+      }))
+    },
+
+    recalculateNormals: (objectId, type) => {
+      set(s => ({
+        objects: s.objects.map(o => {
+          if (o.id !== objectId) return o
+          const fn = type === 'flat' ? recalculateFlatNormals : recalculateSmoothNormals
+          return { ...o, meshData: fn(o.meshData) }
+        }),
+      }))
+    },
+
     updateTransform: (id, transform) => {
       set(s => ({
         objects: s.objects.map(o =>
@@ -146,6 +175,7 @@ export const useSceneStore = create<SceneState>()(
     setEditorMode: (mode) => set({ editorMode: mode, selectedVertexIndex: null }),
     setWireframeMode: (mode) => set({ wireframeMode: mode }),
     toggleGrid: () => set(s => ({ gridVisible: !s.gridVisible })),
+    toggleNormals: () => set(s => ({ showNormals: !s.showNormals })),
 
     getObject: (id) => get().objects.find(o => o.id === id),
     getSelectedObject: () => {
