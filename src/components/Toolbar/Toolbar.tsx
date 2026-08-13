@@ -4,6 +4,8 @@ import type { EditorMode } from '../../state/sceneStore'
 import { AddObjectModal } from './AddObjectModal'
 import styles from './Toolbar.module.css'
 
+const WIREFRAME_ICONS = { tri: '△', quad: '◻' } as const
+
 const MODES: { id: EditorMode; label: string; key: string }[] = [
   { id: 'object', label: 'Object', key: '1' },
   { id: 'vertex', label: 'Vertex', key: '2' },
@@ -13,6 +15,10 @@ const MODES: { id: EditorMode; label: string; key: string }[] = [
 export function Toolbar() {
   const editorMode = useSceneStore(s => s.editorMode)
   const setEditorMode = useSceneStore(s => s.setEditorMode)
+  const wireframeMode = useSceneStore(s => s.wireframeMode)
+  const setWireframeMode = useSceneStore(s => s.setWireframeMode)
+  const gridVisible = useSceneStore(s => s.gridVisible)
+  const toggleGrid = useSceneStore(s => s.toggleGrid)
   const [showAddModal, setShowAddModal] = useState(false)
 
   return (
@@ -25,6 +31,35 @@ export function Toolbar() {
         <button className={styles.addBtn} onClick={() => setShowAddModal(true)}>
           + Add Object
         </button>
+
+        <div className={styles.divider} />
+
+        <button
+          className={`${styles.wfBtn} ${gridVisible ? styles.wfBtnActive : ''}`}
+          onClick={toggleGrid}
+          title="Toggle grid"
+        >
+          ⊞ Grid
+        </button>
+
+        <div className={styles.divider} />
+
+        <div className={styles.wfGroup}>
+          <button
+            className={`${styles.wfBtn} ${wireframeMode === 'tri' ? styles.wfBtnActive : ''}`}
+            onClick={() => setWireframeMode('tri')}
+            title="Show triangles"
+          >
+            {WIREFRAME_ICONS.tri} Tris
+          </button>
+          <button
+            className={`${styles.wfBtn} ${wireframeMode === 'quad' ? styles.wfBtnActive : ''}`}
+            onClick={() => setWireframeMode('quad')}
+            title="Show quads"
+          >
+            {WIREFRAME_ICONS.quad} Quads
+          </button>
+        </div>
 
         <div className={styles.divider} />
 

@@ -9,12 +9,20 @@ export function Viewport() {
 
   const objects = useSceneStore(s => s.objects)
   const selectedObjectId = useSceneStore(s => s.selectedObjectId)
+  const selectedVertexIndex = useSceneStore(s => s.selectedVertexIndex)
   const selectObject = useSceneStore(s => s.selectObject)
+  const selectVertex = useSceneStore(s => s.selectVertex)
   const editorMode = useSceneStore(s => s.editorMode)
+  const wireframeMode = useSceneStore(s => s.wireframeMode)
+  const gridVisible = useSceneStore(s => s.gridVisible)
 
   useEffect(() => {
     if (!containerRef.current) return
-    const sm = new SceneManager(containerRef.current, (id) => selectObject(id))
+    const sm = new SceneManager(
+      containerRef.current,
+      (id) => selectObject(id),
+      (index) => selectVertex(index),
+    )
     sceneManagerRef.current = sm
     return () => {
       sm.dispose()
@@ -26,6 +34,22 @@ export function Viewport() {
   useEffect(() => {
     sceneManagerRef.current?.syncObjects(objects, selectedObjectId)
   }, [objects, selectedObjectId])
+
+  useEffect(() => {
+    sceneManagerRef.current?.setEditorMode(editorMode)
+  }, [editorMode])
+
+  useEffect(() => {
+    sceneManagerRef.current?.selectVertex(selectedVertexIndex)
+  }, [selectedVertexIndex])
+
+  useEffect(() => {
+    sceneManagerRef.current?.setWireframeMode(wireframeMode)
+  }, [wireframeMode])
+
+  useEffect(() => {
+    sceneManagerRef.current?.setGridVisible(gridVisible)
+  }, [gridVisible])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

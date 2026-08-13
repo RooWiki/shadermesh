@@ -134,6 +134,11 @@
   width: 0;
 }
 
+.numInputReadOnly {
+  color: #7070a0;
+  cursor: default;
+}
+
 /* Stat grid */
 .statGrid {
   padding: 0 12px;

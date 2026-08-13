@@ -84,6 +84,33 @@
   color: #4a6a9a;
 }
 
+.wfGroup {
+  display: flex;
+  gap: 2px;
+}
+
+.wfBtn {
+  padding: 4px 9px;
+  background: #1a1a26;
+  border: 1px solid #2a2a3a;
+  color: #7070a0;
+  font-size: 11px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.1s;
+}
+
+.wfBtn:hover {
+  background: #222234;
+  color: #b0b0c8;
+}
+
+.wfBtnActive {
+  background: #1a2a1a;
+  border-color: #3a6a3a;
+  color: #70c070;
+}
+
 .spacer {
   flex: 1;
 }

@@ -5,6 +5,7 @@ import { createMeshObject } from '../core/MeshObject'
 import { createPlane, createCube, createSphere } from '../geometry/primitives'
 
 export type EditorMode = 'object' | 'vertex' | 'face'
+export type WireframeMode = 'tri' | 'quad'
 
 let objectCounter = 0
 function nextId(): string {
@@ -14,7 +15,10 @@ function nextId(): string {
 interface SceneState {
   objects: MeshObject[]
   selectedObjectId: string | null
+  selectedVertexIndex: number | null
   editorMode: EditorMode
+  wireframeMode: WireframeMode
+  gridVisible: boolean
   hoveredObjectId: string | null
 
   // Object management
@@ -31,8 +35,14 @@ interface SceneState {
   updateTransformRotation: (id: string, rotation: [number, number, number]) => void
   updateTransformScale: (id: string, scale: [number, number, number]) => void
 
+  // Vertex editing
+  selectVertex: (index: number | null) => void
+  updateVertexPosition: (objectId: string, index: number, position: [number, number, number]) => void
+
   // Mode
   setEditorMode: (mode: EditorMode) => void
+  setWireframeMode: (mode: WireframeMode) => void
+  toggleGrid: () => void
 
   // Utility
   getObject: (id: string) => MeshObject | undefined
@@ -43,7 +53,10 @@ export const useSceneStore = create<SceneState>()(
   subscribeWithSelector((set, get) => ({
     objects: [],
     selectedObjectId: null,
+    selectedVertexIndex: null,
     editorMode: 'object',
+    wireframeMode: 'tri',
+    gridVisible: true,
     hoveredObjectId: null,
 
     addPlane: (params = {}) => {
@@ -80,8 +93,23 @@ export const useSceneStore = create<SceneState>()(
       }))
     },
 
-    selectObject: (id) => set({ selectedObjectId: id }),
+    selectObject: (id) => set({ selectedObjectId: id, selectedVertexIndex: null }),
     setHovered: (id) => set({ hoveredObjectId: id }),
+
+    selectVertex: (index) => set({ selectedVertexIndex: index }),
+
+    updateVertexPosition: (objectId, index, position) => {
+      set(s => ({
+        objects: s.objects.map(o => {
+          if (o.id !== objectId) return o
+          const positions = o.meshData.positions
+          positions[index * 3] = position[0]
+          positions[index * 3 + 1] = position[1]
+          positions[index * 3 + 2] = position[2]
+          return { ...o, meshData: { ...o.meshData } }
+        }),
+      }))
+    },
 
     updateTransform: (id, transform) => {
       set(s => ({
@@ -115,7 +143,9 @@ export const useSceneStore = create<SceneState>()(
       }))
     },
 
-    setEditorMode: (mode) => set({ editorMode: mode }),
+    setEditorMode: (mode) => set({ editorMode: mode, selectedVertexIndex: null }),
+    setWireframeMode: (mode) => set({ wireframeMode: mode }),
+    toggleGrid: () => set(s => ({ gridVisible: !s.gridVisible })),
 
     getObject: (id) => get().objects.find(o => o.id === id),
     getSelectedObject: () => {
