@@ -15,6 +15,8 @@ interface Props {
 
 export function MeshDataPanel({ obj }: Props) {
   const recalculateNormals = useSceneStore(s => s.recalculateNormals)
+  const initVertexColors = useSceneStore(s => s.initVertexColors)
+  const clearVertexColors = useSceneStore(s => s.clearVertexColors)
   const stats = getMeshStats(obj.meshData)
 
   return (
@@ -72,6 +74,33 @@ export function MeshDataPanel({ obj }: Props) {
         >
           Smooth
         </button>
+      </div>
+
+      <div className={styles.sectionSubtitle}>Vertex Colors</div>
+      <div className={styles.actionRow}>
+        <button
+          className={styles.actionBtn}
+          onClick={() => initVertexColors(obj.id)}
+          title="Initialize all vertex colors to white"
+        >
+          Init White
+        </button>
+        <button
+          className={styles.actionBtn}
+          onClick={() => initVertexColors(obj.id, true)}
+          title="Initialize vertex colors with random values per vertex"
+        >
+          Init Random
+        </button>
+        {stats.hasColors && (
+          <button
+            className={styles.actionBtn}
+            onClick={() => clearVertexColors(obj.id)}
+            title="Remove all vertex color data"
+          >
+            Clear
+          </button>
+        )}
       </div>
 
       <div className={styles.sectionSubtitle}>Memory</div>

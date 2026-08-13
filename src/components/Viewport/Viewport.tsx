@@ -18,6 +18,7 @@ export function Viewport() {
   const wireframeMode = useSceneStore(s => s.wireframeMode)
   const gridVisible = useSceneStore(s => s.gridVisible)
   const showNormals = useSceneStore(s => s.showNormals)
+  const showVertexColors = useSceneStore(s => s.showVertexColors)
 
   useEffect(() => {
     if (!containerRef.current) return
@@ -62,6 +63,10 @@ export function Viewport() {
   useEffect(() => {
     sceneManagerRef.current?.setShowNormals(showNormals)
   }, [showNormals])
+
+  useEffect(() => {
+    sceneManagerRef.current?.setShowVertexColors(showVertexColors)
+  }, [showVertexColors])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

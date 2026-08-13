@@ -21,6 +21,8 @@ export function Toolbar() {
   const toggleGrid = useSceneStore(s => s.toggleGrid)
   const showNormals = useSceneStore(s => s.showNormals)
   const toggleNormals = useSceneStore(s => s.toggleNormals)
+  const showVertexColors = useSceneStore(s => s.showVertexColors)
+  const toggleVertexColors = useSceneStore(s => s.toggleVertexColors)
   const [showAddModal, setShowAddModal] = useState(false)
 
   return (
@@ -50,6 +52,14 @@ export function Toolbar() {
           title="Toggle normal vectors"
         >
           ↑ Normals
+        </button>
+
+        <button
+          className={`${styles.wfBtn} ${showVertexColors ? styles.wfBtnActive : ''}`}
+          onClick={toggleVertexColors}
+          title="Toggle vertex color display (unlit)"
+        >
+          ◈ VColors
         </button>
 
         <div className={styles.divider} />

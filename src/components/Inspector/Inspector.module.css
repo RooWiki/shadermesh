@@ -114,6 +114,7 @@
 .axisX { color: #ff6060; background: #2a1515; border-right-color: #3a2020; }
 .axisY { color: #50dd70; background: #152815; border-right-color: #203520; }
 .axisZ { color: #5088ff; background: #15152a; border-right-color: #202040; }
+.axisA { color: #a0a0a0; background: #1e1e1e; border-right-color: #2a2a2a; }
 
 .numInput {
   width: 100%;

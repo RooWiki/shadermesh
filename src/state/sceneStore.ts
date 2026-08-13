@@ -23,6 +23,7 @@ interface SceneState {
   wireframeMode: WireframeMode
   gridVisible: boolean
   showNormals: boolean
+  showVertexColors: boolean
   hoveredObjectId: string | null
 
   // Object management
@@ -49,11 +50,17 @@ interface SceneState {
   selectFace: (index: number | null) => void
   flipFaceNormal: (objectId: string, faceIndex: number) => void
 
+  // Vertex colors
+  initVertexColors: (objectId: string, random?: boolean) => void
+  clearVertexColors: (objectId: string) => void
+  updateVertexColor: (objectId: string, index: number, color: [number, number, number, number]) => void
+
   // Mode / display
   setEditorMode: (mode: EditorMode) => void
   setWireframeMode: (mode: WireframeMode) => void
   toggleGrid: () => void
   toggleNormals: () => void
+  toggleVertexColors: () => void
 
   // Utility
   getObject: (id: string) => MeshObject | undefined
@@ -70,6 +77,7 @@ export const useSceneStore = create<SceneState>()(
     wireframeMode: 'tri',
     gridVisible: true,
     showNormals: false,
+    showVertexColors: false,
     hoveredObjectId: null,
 
     addPlane: (params = {}) => {
@@ -190,10 +198,54 @@ export const useSceneStore = create<SceneState>()(
       }))
     },
 
+    initVertexColors: (objectId, random = false) => {
+      set(s => ({
+        objects: s.objects.map(o => {
+          if (o.id !== objectId) return o
+          const count = o.meshData.positions.length / 3
+          const colors = new Float32Array(count * 4)
+          if (random) {
+            for (let i = 0; i < count; i++) {
+              colors[i*4]   = Math.random()
+              colors[i*4+1] = Math.random()
+              colors[i*4+2] = Math.random()
+              colors[i*4+3] = 1
+            }
+          } else {
+            colors.fill(1)
+          }
+          return { ...o, meshData: { ...o.meshData, colors } }
+        }),
+      }))
+    },
+
+    clearVertexColors: (objectId) => {
+      set(s => ({
+        objects: s.objects.map(o =>
+          o.id !== objectId ? o : { ...o, meshData: { ...o.meshData, colors: undefined } }
+        ),
+      }))
+    },
+
+    updateVertexColor: (objectId, index, color) => {
+      set(s => ({
+        objects: s.objects.map(o => {
+          if (o.id !== objectId || !o.meshData.colors) return o
+          const colors = o.meshData.colors
+          colors[index*4]   = color[0]
+          colors[index*4+1] = color[1]
+          colors[index*4+2] = color[2]
+          colors[index*4+3] = color[3]
+          return { ...o, meshData: { ...o.meshData } }
+        }),
+      }))
+    },
+
     setEditorMode: (mode) => set({ editorMode: mode, selectedVertexIndex: null, selectedFaceIndex: null }),
     setWireframeMode: (mode) => set({ wireframeMode: mode }),
     toggleGrid: () => set(s => ({ gridVisible: !s.gridVisible })),
     toggleNormals: () => set(s => ({ showNormals: !s.showNormals })),
+    toggleVertexColors: () => set(s => ({ showVertexColors: !s.showVertexColors })),
 
     getObject: (id) => get().objects.find(o => o.id === id),
     getSelectedObject: () => {

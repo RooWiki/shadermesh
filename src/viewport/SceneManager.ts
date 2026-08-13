@@ -20,6 +20,7 @@ export class SceneManager {
   private gridHelper: THREE.GridHelper
 
   private meshMap = new Map<string, THREE.Mesh>()
+  private meshMatMap = new Map<string, THREE.MeshLambertMaterial>()
   private wireframeMap = new Map<string, THREE.LineSegments>()
   private meshDataRefMap = new Map<string, MeshData>()
 
@@ -49,9 +50,11 @@ export class SceneManager {
 
   private defaultMat: THREE.MeshLambertMaterial
   private selectedMat: THREE.MeshLambertMaterial
+  private vcMat: THREE.MeshBasicMaterial
   private wireframeMat: THREE.LineBasicMaterial
   private selectedWireframeMat: THREE.LineBasicMaterial
   private faceHighlightMat: THREE.MeshBasicMaterial
+  private showVertexColors = false
 
   constructor(
     container: HTMLDivElement,
@@ -97,6 +100,7 @@ export class SceneManager {
 
     this.defaultMat = new THREE.MeshLambertMaterial({ color: 0x5a7cba })
     this.selectedMat = new THREE.MeshLambertMaterial({ color: 0x7aace0, emissive: 0x112233, emissiveIntensity: 0.3 })
+    this.vcMat = new THREE.MeshBasicMaterial({ vertexColors: true })
     this.wireframeMat = new THREE.LineBasicMaterial({ color: 0x2244aa, transparent: true, opacity: 0.4 })
     this.selectedWireframeMat = new THREE.LineBasicMaterial({ color: 0xf0a050, transparent: true, opacity: 0.8 })
     this.faceHighlightMat = new THREE.MeshBasicMaterial({
@@ -295,6 +299,15 @@ export class SceneManager {
     this.gridHelper.visible = visible
   }
 
+  setShowVertexColors(show: boolean) {
+    this.showVertexColors = show
+    for (const obj of this.currentObjects) {
+      const mesh = this.meshMap.get(obj.id)
+      const mat = this.meshMatMap.get(obj.id)
+      if (mesh && mat) mesh.material = (show && obj.meshData.colors) ? this.vcMat : mat
+    }
+  }
+
   setShowNormals(show: boolean) {
     this.showNormals = show
     if (show && this.selectedId) {
@@ -325,7 +338,10 @@ export class SceneManager {
 
   private addMeshToScene(obj: MeshObject) {
     const geometry = meshDataToBufferGeometry(obj.meshData)
-    const mesh = new THREE.Mesh(geometry, this.defaultMat.clone())
+    const mat = this.defaultMat.clone()
+    this.meshMatMap.set(obj.id, mat)
+    const activeMat = (this.showVertexColors && obj.meshData.colors) ? this.vcMat : mat
+    const mesh = new THREE.Mesh(geometry, activeMat)
     mesh.castShadow = true
     mesh.receiveShadow = true
     this.applyTransform(mesh, obj)
@@ -345,6 +361,10 @@ export class SceneManager {
 
     mesh.geometry.dispose()
     mesh.geometry = meshDataToBufferGeometry(obj.meshData)
+
+    // Reapply material in case colors were added or removed
+    const mat = this.meshMatMap.get(obj.id)
+    if (mat) mesh.material = (this.showVertexColors && obj.meshData.colors) ? this.vcMat : mat
 
     const oldWf = this.wireframeMap.get(obj.id)
     if (oldWf) { mesh.remove(oldWf); oldWf.geometry.dispose() }
@@ -383,9 +403,12 @@ export class SceneManager {
 
   private setSelection(id: string | null) {
     if (this.selectedId) {
-      const prev = this.meshMap.get(this.selectedId)
-      if (prev) {
-        ;(prev.material as THREE.MeshLambertMaterial).copy(this.defaultMat)
+      const prevMat = this.meshMatMap.get(this.selectedId)
+      const prevMesh = this.meshMap.get(this.selectedId)
+      const prevObj = this.currentObjects.find(o => o.id === this.selectedId)
+      if (prevMat && prevMesh) {
+        prevMat.copy(this.defaultMat)
+        if (!(this.showVertexColors && prevObj?.meshData.colors)) prevMesh.material = prevMat
         const wf = this.wireframeMap.get(this.selectedId)
         if (wf) (wf.material as THREE.LineBasicMaterial).copy(this.wireframeMat)
       }
@@ -398,12 +421,14 @@ export class SceneManager {
 
     if (id) {
       const mesh = this.meshMap.get(id)
-      if (mesh) {
-        ;(mesh.material as THREE.MeshLambertMaterial).copy(this.selectedMat)
+      const meshMat = this.meshMatMap.get(id)
+      const obj = this.currentObjects.find(o => o.id === id)
+      if (mesh && meshMat) {
+        meshMat.copy(this.selectedMat)
+        if (!(this.showVertexColors && obj?.meshData.colors)) mesh.material = meshMat
         const wf = this.wireframeMap.get(id)
         if (wf) (wf.material as THREE.LineBasicMaterial).copy(this.selectedWireframeMat)
       }
-      const obj = this.currentObjects.find(o => o.id === id)
       if (obj) {
         if (this.currentMode === 'vertex') this.buildVertexOverlay(obj.meshData)
         if (this.showNormals) this.buildNormalOverlay(obj.meshData)
@@ -418,6 +443,8 @@ export class SceneManager {
     }
     const mesh = this.meshMap.get(id)
     if (mesh) { mesh.geometry.dispose(); this.scene.remove(mesh); this.meshMap.delete(id) }
+    const mat = this.meshMatMap.get(id)
+    if (mat) { mat.dispose(); this.meshMatMap.delete(id) }
     const wf = this.wireframeMap.get(id)
     if (wf) { wf.geometry.dispose(); this.wireframeMap.delete(id) }
     this.meshDataRefMap.delete(id)
