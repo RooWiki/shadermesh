@@ -89,14 +89,7 @@ export function Toolbar() {
 
         <div className={styles.spacer} />
 
-        <div className={styles.statusLabel}>
-          {editorMode === 'vertex' && (
-            <span className={styles.wip}>⚠ Vertex Mode — FASE 2</span>
-          )}
-          {editorMode === 'face' && (
-            <span className={styles.wip}>⚠ Face Mode — FASE 4</span>
-          )}
-        </div>
+        <div className={styles.statusLabel} />
       </div>
 
       {showAddModal && <AddObjectModal onClose={() => setShowAddModal(false)} />}

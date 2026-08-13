@@ -10,8 +10,10 @@ export function Viewport() {
   const objects = useSceneStore(s => s.objects)
   const selectedObjectId = useSceneStore(s => s.selectedObjectId)
   const selectedVertexIndex = useSceneStore(s => s.selectedVertexIndex)
+  const selectedFaceIndex = useSceneStore(s => s.selectedFaceIndex)
   const selectObject = useSceneStore(s => s.selectObject)
   const selectVertex = useSceneStore(s => s.selectVertex)
+  const selectFace = useSceneStore(s => s.selectFace)
   const editorMode = useSceneStore(s => s.editorMode)
   const wireframeMode = useSceneStore(s => s.wireframeMode)
   const gridVisible = useSceneStore(s => s.gridVisible)
@@ -23,6 +25,7 @@ export function Viewport() {
       containerRef.current,
       (id) => selectObject(id),
       (index) => selectVertex(index),
+      (index) => selectFace(index),
     )
     sceneManagerRef.current = sm
     return () => {
@@ -43,6 +46,10 @@ export function Viewport() {
   useEffect(() => {
     sceneManagerRef.current?.selectVertex(selectedVertexIndex)
   }, [selectedVertexIndex])
+
+  useEffect(() => {
+    sceneManagerRef.current?.selectFace(selectedFaceIndex)
+  }, [selectedFaceIndex])
 
   useEffect(() => {
     sceneManagerRef.current?.setWireframeMode(wireframeMode)

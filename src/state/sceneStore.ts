@@ -4,6 +4,7 @@ import type { MeshObject, Transform } from '../core/MeshObject'
 import { createMeshObject } from '../core/MeshObject'
 import { createPlane, createCube, createSphere } from '../geometry/primitives'
 import { recalculateFlatNormals, recalculateSmoothNormals } from '../geometry/normals'
+import { flipFace } from '../geometry/faces'
 
 export type EditorMode = 'object' | 'vertex' | 'face'
 export type WireframeMode = 'tri' | 'quad'
@@ -17,6 +18,7 @@ interface SceneState {
   objects: MeshObject[]
   selectedObjectId: string | null
   selectedVertexIndex: number | null
+  selectedFaceIndex: number | null
   editorMode: EditorMode
   wireframeMode: WireframeMode
   gridVisible: boolean
@@ -43,6 +45,10 @@ interface SceneState {
   updateVertexNormal: (objectId: string, index: number, normal: [number, number, number]) => void
   recalculateNormals: (objectId: string, type: 'flat' | 'smooth') => void
 
+  // Face editing
+  selectFace: (index: number | null) => void
+  flipFaceNormal: (objectId: string, faceIndex: number) => void
+
   // Mode / display
   setEditorMode: (mode: EditorMode) => void
   setWireframeMode: (mode: WireframeMode) => void
@@ -59,6 +65,7 @@ export const useSceneStore = create<SceneState>()(
     objects: [],
     selectedObjectId: null,
     selectedVertexIndex: null,
+    selectedFaceIndex: null,
     editorMode: 'object',
     wireframeMode: 'tri',
     gridVisible: true,
@@ -99,10 +106,21 @@ export const useSceneStore = create<SceneState>()(
       }))
     },
 
-    selectObject: (id) => set({ selectedObjectId: id, selectedVertexIndex: null }),
+    selectObject: (id) => set({ selectedObjectId: id, selectedVertexIndex: null, selectedFaceIndex: null }),
     setHovered: (id) => set({ hoveredObjectId: id }),
 
     selectVertex: (index) => set({ selectedVertexIndex: index }),
+
+    selectFace: (index) => set({ selectedFaceIndex: index }),
+
+    flipFaceNormal: (objectId, faceIndex) => {
+      set(s => ({
+        objects: s.objects.map(o => {
+          if (o.id !== objectId) return o
+          return { ...o, meshData: flipFace(o.meshData, faceIndex) }
+        }),
+      }))
+    },
 
     updateVertexPosition: (objectId, index, position) => {
       set(s => ({
@@ -172,7 +190,7 @@ export const useSceneStore = create<SceneState>()(
       }))
     },
 
-    setEditorMode: (mode) => set({ editorMode: mode, selectedVertexIndex: null }),
+    setEditorMode: (mode) => set({ editorMode: mode, selectedVertexIndex: null, selectedFaceIndex: null }),
     setWireframeMode: (mode) => set({ wireframeMode: mode }),
     toggleGrid: () => set(s => ({ gridVisible: !s.gridVisible })),
     toggleNormals: () => set(s => ({ showNormals: !s.showNormals })),

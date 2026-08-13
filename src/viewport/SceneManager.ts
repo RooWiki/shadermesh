@@ -7,6 +7,7 @@ import { meshDataToBufferGeometry } from './MeshRenderer'
 
 type SelectCallback = (id: string | null) => void
 type SelectVertexCallback = (index: number | null) => void
+type SelectFaceCallback = (index: number | null) => void
 
 const VERTEX_COLOR_DEFAULT = [0.35, 0.55, 0.95] as const
 const VERTEX_COLOR_SELECTED = [1.0, 0.85, 0.1] as const
@@ -25,6 +26,7 @@ export class SceneManager {
   private selectedId: string | null = null
   private onSelect: SelectCallback
   private onSelectVertex: SelectVertexCallback
+  private onSelectFace: SelectFaceCallback
   private wireframeMode: WireframeMode = 'tri'
   private currentMode: EditorMode = 'object'
   private currentObjects: MeshObject[] = []
@@ -32,6 +34,10 @@ export class SceneManager {
   // Vertex overlay (only for selected object in vertex mode)
   private vertexPoints: THREE.Points | null = null
   private selectedVertexIndex: number | null = null
+
+  // Face overlay (only for selected object in face mode)
+  private faceHighlight: THREE.Mesh | null = null
+  private selectedFaceIndex: number | null = null
 
   // Normal overlay
   private normalLines: THREE.LineSegments | null = null
@@ -45,15 +51,18 @@ export class SceneManager {
   private selectedMat: THREE.MeshLambertMaterial
   private wireframeMat: THREE.LineBasicMaterial
   private selectedWireframeMat: THREE.LineBasicMaterial
+  private faceHighlightMat: THREE.MeshBasicMaterial
 
   constructor(
     container: HTMLDivElement,
     onSelect: SelectCallback,
     onSelectVertex: SelectVertexCallback,
+    onSelectFace: SelectFaceCallback,
   ) {
     this.container = container
     this.onSelect = onSelect
     this.onSelectVertex = onSelectVertex
+    this.onSelectFace = onSelectFace
 
     const { clientWidth: w, clientHeight: h } = container
 
@@ -90,6 +99,13 @@ export class SceneManager {
     this.selectedMat = new THREE.MeshLambertMaterial({ color: 0x7aace0, emissive: 0x112233, emissiveIntensity: 0.3 })
     this.wireframeMat = new THREE.LineBasicMaterial({ color: 0x2244aa, transparent: true, opacity: 0.4 })
     this.selectedWireframeMat = new THREE.LineBasicMaterial({ color: 0xf0a050, transparent: true, opacity: 0.8 })
+    this.faceHighlightMat = new THREE.MeshBasicMaterial({
+      color: 0xff8800,
+      transparent: true,
+      opacity: 0.45,
+      side: THREE.DoubleSide,
+      depthTest: false,
+    })
 
     this.orbitControls = new OrbitControls(this.camera, this.renderer.domElement)
     this.orbitControls.enableDamping = true
@@ -138,6 +154,8 @@ export class SceneManager {
     if (e.button !== 0) return
     if (this.currentMode === 'vertex') {
       this.pickVertex(e)
+    } else if (this.currentMode === 'face') {
+      this.pickFace(e)
     } else {
       this.pickObject(e)
     }
@@ -183,6 +201,24 @@ export class SceneManager {
     this.pickObject(e)
   }
 
+  private pickFace(e: PointerEvent) {
+    if (this.selectedId) {
+      const mesh = this.meshMap.get(this.selectedId)
+      if (mesh) {
+        const raycaster = new THREE.Raycaster()
+        raycaster.setFromCamera(this.getNDC(e), this.camera)
+        const hits = raycaster.intersectObject(mesh, false)
+        if (hits.length > 0 && hits[0].faceIndex !== undefined) {
+          this.onSelectFace(hits[0].faceIndex)
+          return
+        }
+        this.onSelectFace(null)
+        return
+      }
+    }
+    this.pickObject(e)
+  }
+
   private findIdByMesh(mesh: THREE.Mesh): string | null {
     for (const [id, m] of this.meshMap) {
       if (m === mesh) return id
@@ -222,11 +258,24 @@ export class SceneManager {
     } else {
       this.clearVertexOverlay()
     }
+    if (mode !== 'face') {
+      this.clearFaceHighlight()
+    }
   }
 
   selectVertex(index: number | null) {
     this.selectedVertexIndex = index
     this.updateVertexHighlight()
+  }
+
+  selectFace(index: number | null) {
+    this.selectedFaceIndex = index
+    if (index !== null && this.selectedId) {
+      const obj = this.currentObjects.find(o => o.id === this.selectedId)
+      if (obj) this.buildFaceHighlight(obj.meshData, index)
+    } else {
+      this.clearFaceHighlight()
+    }
   }
 
   setWireframeMode(mode: WireframeMode) {
@@ -310,6 +359,9 @@ export class SceneManager {
         this.buildVertexOverlay(obj.meshData)
         if (this.selectedVertexIndex !== null) this.updateVertexHighlight()
       }
+      if (this.currentMode === 'face' && this.selectedFaceIndex !== null) {
+        this.buildFaceHighlight(obj.meshData, this.selectedFaceIndex)
+      }
       if (this.showNormals) this.buildNormalOverlay(obj.meshData)
     }
 
@@ -341,6 +393,7 @@ export class SceneManager {
 
     this.selectedId = id
     this.clearVertexOverlay()
+    this.clearFaceHighlight()
     this.clearNormalOverlay()
 
     if (id) {
@@ -359,7 +412,10 @@ export class SceneManager {
   }
 
   private removeMeshFromScene(id: string) {
-    if (this.selectedId === id) this.clearVertexOverlay()
+    if (this.selectedId === id) {
+      this.clearVertexOverlay()
+      this.clearFaceHighlight()
+    }
     const mesh = this.meshMap.get(id)
     if (mesh) { mesh.geometry.dispose(); this.scene.remove(mesh); this.meshMap.delete(id) }
     const wf = this.wireframeMap.get(id)
@@ -373,6 +429,38 @@ export class SceneManager {
       ? new THREE.EdgesGeometry(geometry, 5)
       : new THREE.WireframeGeometry(geometry)
     return new THREE.LineSegments(wfGeo, this.wireframeMat.clone())
+  }
+
+  // ── Face highlight ───────────────────────────────────────────
+
+  private buildFaceHighlight(meshData: MeshData, faceIndex: number) {
+    this.clearFaceHighlight()
+    const mesh = this.meshMap.get(this.selectedId!)
+    if (!mesh) return
+
+    const { positions, indices } = meshData
+    const a = indices[faceIndex * 3]
+    const b = indices[faceIndex * 3 + 1]
+    const c = indices[faceIndex * 3 + 2]
+
+    const verts = new Float32Array([
+      positions[a*3], positions[a*3+1], positions[a*3+2],
+      positions[b*3], positions[b*3+1], positions[b*3+2],
+      positions[c*3], positions[c*3+1], positions[c*3+2],
+    ])
+
+    const geo = new THREE.BufferGeometry()
+    geo.setAttribute('position', new THREE.BufferAttribute(verts, 3))
+
+    this.faceHighlight = new THREE.Mesh(geo, this.faceHighlightMat)
+    mesh.add(this.faceHighlight)
+  }
+
+  private clearFaceHighlight() {
+    if (!this.faceHighlight) return
+    this.faceHighlight.parent?.remove(this.faceHighlight)
+    this.faceHighlight.geometry.dispose()
+    this.faceHighlight = null
   }
 
   // ── Normal overlay ───────────────────────────────────────────
@@ -542,6 +630,7 @@ export class SceneManager {
     this.resizeObserver.disconnect()
     this.renderer.domElement.removeEventListener('pointerdown', this.onPointerDown)
     this.clearVertexOverlay()
+    this.clearFaceHighlight()
     this.clearNormalOverlay()
     for (const [id] of this.meshMap) this.removeMeshFromScene(id)
     this.orbitControls.dispose()
