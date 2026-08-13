@@ -1,3 +1,4 @@
+
 # ShaderMesh
 
 A desktop tool for Technical Artists to inspect and edit 3D mesh data before applying shaders.
@@ -5,7 +6,7 @@ A desktop tool for Technical Artists to inspect and edit 3D mesh data before app
 ## What is ShaderMesh?
 
 ShaderMesh makes the relationship between mesh data and shaders visible and editable:
-
+<img width="1196" height="927" alt="2026-08-13_17-13-34" src="https://github.com/user-attachments/assets/6d6d4dba-2910-4654-aaa9-c96fd091e57a" />
 ```
 MESH
 │
