@@ -59,11 +59,11 @@ export function createCube(params: CubeParams = {}): MeshData {
 
     const ii = f * 6
     indices[ii + 0] = base + 0
-    indices[ii + 1] = base + 2
-    indices[ii + 2] = base + 1
+    indices[ii + 1] = base + 1
+    indices[ii + 2] = base + 2
     indices[ii + 3] = base + 0
-    indices[ii + 4] = base + 3
-    indices[ii + 5] = base + 2
+    indices[ii + 4] = base + 2
+    indices[ii + 5] = base + 3
   })
 
   return { positions, normals, uvs, indices }

@@ -12,7 +12,7 @@ export function recalculateFlatNormals(meshData: MeshData): MeshData {
     const cx = positions[c*3], cy = positions[c*3+1], cz = positions[c*3+2]
     const ex = bx-ax, ey = by-ay, ez = bz-az
     const fx = cx-ax, fy = cy-ay, fz = cz-az
-    let nx = ez*fy - ey*fz, ny = ex*fz - ez*fx, nz = ey*fx - ex*fy
+    let nx = ey*fz - ez*fy, ny = ez*fx - ex*fz, nz = ex*fy - ey*fx
     const len = Math.sqrt(nx*nx + ny*ny + nz*nz)
     if (len > 0) { nx /= len; ny /= len; nz /= len }
     for (const vi of [a, b, c]) {
@@ -36,7 +36,7 @@ export function recalculateSmoothNormals(meshData: MeshData): MeshData {
     const ex = bx-ax, ey = by-ay, ez = bz-az
     const fx = cx-ax, fy = cy-ay, fz = cz-az
     // Area-weighted: cross product magnitude = 2 * area
-    const nx = ez*fy - ey*fz, ny = ex*fz - ez*fx, nz = ey*fx - ex*fy
+    const nx = ey*fz - ez*fy, ny = ez*fx - ex*fz, nz = ex*fy - ey*fx
     for (const vi of [a, b, c]) {
       normals[vi*3] += nx; normals[vi*3+1] += ny; normals[vi*3+2] += nz
     }

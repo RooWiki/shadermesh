@@ -52,13 +52,13 @@ export function createSphere(params: SphereParams = {}): MeshData {
       const d = c + 1
       if (y !== 0) {
         indices[ii++] = a
-        indices[ii++] = c
         indices[ii++] = b
+        indices[ii++] = c
       }
       if (y !== hs - 1) {
         indices[ii++] = b
-        indices[ii++] = c
         indices[ii++] = d
+        indices[ii++] = c
       }
     }
   }
