@@ -84,3 +84,16 @@
 .deleteBtn:hover {
   color: #ff6666;
 }
+
+.renameInput {
+  flex: 1;
+  min-width: 0;
+  background: #111120;
+  border: 1px solid #5c7cfa;
+  border-radius: 3px;
+  color: #e0e0f4;
+  font-size: 12px;
+  font-family: inherit;
+  padding: 1px 4px;
+  outline: none;
+}

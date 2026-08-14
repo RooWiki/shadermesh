@@ -36,6 +36,20 @@
   border-bottom: 1px solid #2a2a36;
 }
 
+.renameInput {
+  flex: 1;
+  min-width: 0;
+  background: #111120;
+  border: 1px solid #5c7cfa;
+  border-radius: 3px;
+  color: #e0e0f4;
+  font-size: 12px;
+  font-family: inherit;
+  font-weight: 600;
+  padding: 1px 4px;
+  outline: none;
+}
+
 .objectIcon {
   font-size: 10px;
   color: #5a7aaa;
@@ -127,6 +141,11 @@
   font-family: 'JetBrains Mono', 'Fira Code', monospace;
   outline: none;
   text-align: right;
+  cursor: ew-resize;
+}
+
+.numInput:focus {
+  cursor: text;
 }
 
 .numInput::-webkit-inner-spin-button,
@@ -137,7 +156,7 @@
 
 .numInputReadOnly {
   color: #7070a0;
-  cursor: default;
+  cursor: default !important;
 }
 
 .actionRow {

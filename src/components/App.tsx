@@ -13,8 +13,16 @@ const DEFAULT_LEFT_WIDTH = 200
 
 function useGlobalShortcuts() {
   const setEditorMode = useSceneStore(s => s.setEditorMode)
+  const undo = useSceneStore(s => s.undo)
+  const redo = useSceneStore(s => s.redo)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.key === 'z') {
+        if (e.target instanceof HTMLInputElement) return
+        e.preventDefault()
+        if (e.shiftKey) redo(); else undo()
+        return
+      }
       if (e.target instanceof HTMLInputElement) return
       switch (e.key) {
         case '1': setEditorMode('object'); break
@@ -24,7 +32,7 @@ function useGlobalShortcuts() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [setEditorMode])
+  }, [setEditorMode, undo, redo])
 }
 
 function usePanelResize(initialWidth: number, side: 'left' | 'right') {

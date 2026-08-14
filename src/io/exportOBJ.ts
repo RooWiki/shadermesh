@@ -1,25 +1,35 @@
 import type { MeshData } from '../core/MeshData'
 
+function f(n: number): string {
+  // Fixed-point with up to 6 decimal places; avoids scientific notation
+  return n.toFixed(6).replace(/\.?0+$/, '') || '0'
+}
+
+function safeName(name: string): string {
+  return name.replace(/[^a-zA-Z0-9_-]/g, '_')
+}
+
 export function exportOBJ(meshData: MeshData, name: string): string {
   const { positions, normals, uvs, indices } = meshData
-  const lines: string[] = [`# ShaderMesh — ${name}`, `g ${name}`, '']
+  const grp = safeName(name)
+  const lines: string[] = [`# ShaderMesh - ${name}`, `g ${grp}`, '']
 
   const vCount = positions.length / 3
   for (let i = 0; i < vCount; i++)
-    lines.push(`v ${positions[i*3]} ${positions[i*3+1]} ${positions[i*3+2]}`)
+    lines.push(`v ${f(positions[i*3])} ${f(positions[i*3+1])} ${f(positions[i*3+2])}`)
 
   if (uvs) {
     lines.push('')
     const uvCount = uvs.length / 2
     for (let i = 0; i < uvCount; i++)
-      lines.push(`vt ${uvs[i*2]} ${uvs[i*2+1]}`)
+      lines.push(`vt ${f(uvs[i*2])} ${f(uvs[i*2+1])}`)
   }
 
   if (normals) {
     lines.push('')
     const nCount = normals.length / 3
     for (let i = 0; i < nCount; i++)
-      lines.push(`vn ${normals[i*3]} ${normals[i*3+1]} ${normals[i*3+2]}`)
+      lines.push(`vn ${f(normals[i*3])} ${f(normals[i*3+1])} ${f(normals[i*3+2])}`)
   }
 
   lines.push('')

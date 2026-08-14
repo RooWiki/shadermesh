@@ -12,11 +12,11 @@ export interface NumberInputProps {
 export function NumberInput({ value, onChange, step = 0.1, decimals = 3, readOnly = false, className }: NumberInputProps) {
   const [display, setDisplay] = useState(value.toFixed(decimals))
   const focused = useRef(false)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const drag = useRef<{ startX: number; startValue: number; active: boolean } | null>(null)
 
   useEffect(() => {
-    if (!focused.current) {
-      setDisplay(value.toFixed(decimals))
-    }
+    if (!focused.current) setDisplay(value.toFixed(decimals))
   }, [value, decimals])
 
   const commit = (raw: string) => {
@@ -29,13 +29,47 @@ export function NumberInput({ value, onChange, step = 0.1, decimals = 3, readOnl
     }
   }
 
+  const handleMouseDown = (e: React.MouseEvent<HTMLInputElement>) => {
+    if (readOnly || focused.current) return
+    e.preventDefault()
+
+    const startX = e.clientX
+    const startValue = parseFloat(display)
+    drag.current = { startX, startValue: isNaN(startValue) ? 0 : startValue, active: false }
+
+    const onMove = (ev: MouseEvent) => {
+      if (!drag.current) return
+      const delta = ev.clientX - drag.current.startX
+      if (!drag.current.active && Math.abs(delta) < 3) return
+      drag.current.active = true
+      const next = parseFloat((drag.current.startValue + delta * step).toFixed(decimals))
+      onChange(next)
+      setDisplay(next.toFixed(decimals))
+    }
+
+    const onUp = () => {
+      document.removeEventListener('mousemove', onMove)
+      document.removeEventListener('mouseup', onUp)
+      if (!drag.current?.active) {
+        inputRef.current?.focus()
+        inputRef.current?.select()
+      }
+      drag.current = null
+    }
+
+    document.addEventListener('mousemove', onMove)
+    document.addEventListener('mouseup', onUp)
+  }
+
   return (
     <input
+      ref={inputRef}
       type="text"
       inputMode="decimal"
       readOnly={readOnly}
       value={display}
       className={className}
+      onMouseDown={handleMouseDown}
       onFocus={() => { focused.current = true }}
       onBlur={e => {
         focused.current = false

@@ -10,9 +10,27 @@ import { calculateTangents } from '../geometry/tangents'
 export type EditorMode = 'object' | 'vertex' | 'face'
 export type WireframeMode = 'tri' | 'quad'
 
+const MAX_HISTORY = 50
+
 let objectCounter = 0
 function nextId(): string {
   return `obj_${++objectCounter}`
+}
+
+// Deep clone objects so TypedArrays in history are independent snapshots
+function cloneObjects(objects: MeshObject[]): MeshObject[] {
+  return objects.map(o => ({
+    ...o,
+    transform: { ...o.transform, position: [...o.transform.position] as [number,number,number], rotation: [...o.transform.rotation] as [number,number,number], scale: [...o.transform.scale] as [number,number,number] },
+    meshData: {
+      positions: new Float32Array(o.meshData.positions),
+      normals:  o.meshData.normals  ? new Float32Array(o.meshData.normals)  : undefined,
+      uvs:      o.meshData.uvs      ? new Float32Array(o.meshData.uvs)      : undefined,
+      tangents: o.meshData.tangents ? new Float32Array(o.meshData.tangents) : undefined,
+      colors:   o.meshData.colors   ? new Float32Array(o.meshData.colors)   : undefined,
+      indices:  new Uint32Array(o.meshData.indices),
+    },
+  }))
 }
 
 interface SceneState {
@@ -28,12 +46,20 @@ interface SceneState {
   showVertexColors: boolean
   hoveredObjectId: string | null
 
+  // History
+  undoStack: MeshObject[][]
+  redoStack: MeshObject[][]
+  pushHistory: () => void
+  undo: () => void
+  redo: () => void
+
   // Object management
   addPlane: (params?: { width?: number; height?: number; subdivisionsX?: number; subdivisionsY?: number }) => string
   addCube: (params?: { width?: number; height?: number; depth?: number }) => string
   addSphere: (params?: { radius?: number; widthSegments?: number; heightSegments?: number }) => string
   importObject: (meshData: import('../core/MeshData').MeshData, name: string) => string
   removeObject: (id: string) => void
+  renameObject: (id: string, name: string) => void
   selectObject: (id: string | null) => void
   setHovered: (id: string | null) => void
 
@@ -88,8 +114,46 @@ export const useSceneStore = create<SceneState>()(
     showTangents: false,
     showVertexColors: false,
     hoveredObjectId: null,
+    undoStack: [],
+    redoStack: [],
+
+    pushHistory: () => {
+      const { objects, undoStack } = get()
+      const snapshot = cloneObjects(objects)
+      set({
+        undoStack: undoStack.length >= MAX_HISTORY
+          ? [...undoStack.slice(1), snapshot]
+          : [...undoStack, snapshot],
+        redoStack: [],
+      })
+    },
+
+    undo: () => {
+      const { objects, undoStack, redoStack } = get()
+      if (undoStack.length === 0) return
+      const prev = undoStack[undoStack.length - 1]
+      const current = cloneObjects(objects)
+      set({
+        objects: prev,
+        undoStack: undoStack.slice(0, -1),
+        redoStack: [...redoStack, current],
+      })
+    },
+
+    redo: () => {
+      const { objects, undoStack, redoStack } = get()
+      if (redoStack.length === 0) return
+      const next = redoStack[redoStack.length - 1]
+      const current = cloneObjects(objects)
+      set({
+        objects: next,
+        undoStack: [...undoStack, current],
+        redoStack: redoStack.slice(0, -1),
+      })
+    },
 
     addPlane: (params = {}) => {
+      get().pushHistory()
       const id = nextId()
       const name = `Plane.${String(objectCounter).padStart(3, '0')}`
       const meshData = createPlane(params)
@@ -99,6 +163,7 @@ export const useSceneStore = create<SceneState>()(
     },
 
     addCube: (params = {}) => {
+      get().pushHistory()
       const id = nextId()
       const name = `Cube.${String(objectCounter).padStart(3, '0')}`
       const meshData = createCube(params)
@@ -108,6 +173,7 @@ export const useSceneStore = create<SceneState>()(
     },
 
     addSphere: (params = {}) => {
+      get().pushHistory()
       const id = nextId()
       const name = `Sphere.${String(objectCounter).padStart(3, '0')}`
       const meshData = createSphere(params)
@@ -117,6 +183,7 @@ export const useSceneStore = create<SceneState>()(
     },
 
     importObject: (meshData, name) => {
+      get().pushHistory()
       const id = nextId()
       const obj = createMeshObject(id, name, meshData)
       set(s => ({ objects: [...s.objects, obj], selectedObjectId: id }))
@@ -124,10 +191,17 @@ export const useSceneStore = create<SceneState>()(
     },
 
     removeObject: (id) => {
+      get().pushHistory()
       set(s => ({
         objects: s.objects.filter(o => o.id !== id),
         selectedObjectId: s.selectedObjectId === id ? null : s.selectedObjectId,
       }))
+    },
+
+    renameObject: (id, name) => {
+      const trimmed = name.trim()
+      if (!trimmed) return
+      set(s => ({ objects: s.objects.map(o => o.id === id ? { ...o, name: trimmed } : o) }))
     },
 
     selectObject: (id) => set({ selectedObjectId: id, selectedVertexIndex: null, selectedFaceIndex: null }),
@@ -138,6 +212,7 @@ export const useSceneStore = create<SceneState>()(
     selectFace: (index) => set({ selectedFaceIndex: index }),
 
     flipFaceNormal: (objectId, faceIndex) => {
+      get().pushHistory()
       set(s => ({
         objects: s.objects.map(o => {
           if (o.id !== objectId) return o
@@ -147,6 +222,7 @@ export const useSceneStore = create<SceneState>()(
     },
 
     updateVertexPosition: (objectId, index, position) => {
+      get().pushHistory()
       set(s => ({
         objects: s.objects.map(o => {
           if (o.id !== objectId) return o
@@ -160,6 +236,7 @@ export const useSceneStore = create<SceneState>()(
     },
 
     updateVertexNormal: (objectId, index, normal) => {
+      get().pushHistory()
       set(s => ({
         objects: s.objects.map(o => {
           if (o.id !== objectId || !o.meshData.normals) return o
@@ -173,6 +250,7 @@ export const useSceneStore = create<SceneState>()(
     },
 
     recalculateNormals: (objectId, type) => {
+      get().pushHistory()
       set(s => ({
         objects: s.objects.map(o => {
           if (o.id !== objectId) return o
@@ -183,6 +261,7 @@ export const useSceneStore = create<SceneState>()(
     },
 
     updateTransform: (id, transform) => {
+      get().pushHistory()
       set(s => ({
         objects: s.objects.map(o =>
           o.id === id ? { ...o, transform: { ...o.transform, ...transform } } : o
@@ -191,6 +270,7 @@ export const useSceneStore = create<SceneState>()(
     },
 
     updateTransformPosition: (id, position) => {
+      get().pushHistory()
       set(s => ({
         objects: s.objects.map(o =>
           o.id === id ? { ...o, transform: { ...o.transform, position } } : o
@@ -199,6 +279,7 @@ export const useSceneStore = create<SceneState>()(
     },
 
     updateTransformRotation: (id, rotation) => {
+      get().pushHistory()
       set(s => ({
         objects: s.objects.map(o =>
           o.id === id ? { ...o, transform: { ...o.transform, rotation } } : o
@@ -207,6 +288,7 @@ export const useSceneStore = create<SceneState>()(
     },
 
     updateTransformScale: (id, scale) => {
+      get().pushHistory()
       set(s => ({
         objects: s.objects.map(o =>
           o.id === id ? { ...o, transform: { ...o.transform, scale } } : o
@@ -215,6 +297,7 @@ export const useSceneStore = create<SceneState>()(
     },
 
     initVertexColors: (objectId, random = false) => {
+      get().pushHistory()
       set(s => ({
         objects: s.objects.map(o => {
           if (o.id !== objectId) return o
@@ -236,6 +319,7 @@ export const useSceneStore = create<SceneState>()(
     },
 
     clearVertexColors: (objectId) => {
+      get().pushHistory()
       set(s => ({
         objects: s.objects.map(o =>
           o.id !== objectId ? o : { ...o, meshData: { ...o.meshData, colors: undefined } }
@@ -244,6 +328,7 @@ export const useSceneStore = create<SceneState>()(
     },
 
     updateVertexColor: (objectId, index, color) => {
+      get().pushHistory()
       set(s => ({
         objects: s.objects.map(o => {
           if (o.id !== objectId || !o.meshData.colors) return o
@@ -259,7 +344,9 @@ export const useSceneStore = create<SceneState>()(
 
     setEditorMode: (mode) => set({ editorMode: mode, selectedVertexIndex: null, selectedFaceIndex: null }),
     setWireframeMode: (mode) => set({ wireframeMode: mode }),
+
     computeTangents: (objectId) => {
+      get().pushHistory()
       set(s => ({
         objects: s.objects.map(o =>
           o.id !== objectId ? o : { ...o, meshData: calculateTangents(o.meshData) }
@@ -268,6 +355,7 @@ export const useSceneStore = create<SceneState>()(
     },
 
     clearTangents: (objectId) => {
+      get().pushHistory()
       set(s => ({
         objects: s.objects.map(o =>
           o.id !== objectId ? o : { ...o, meshData: { ...o.meshData, tangents: undefined } }
