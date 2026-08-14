@@ -27,13 +27,14 @@
 
 .typeRow {
   display: flex;
+  flex-wrap: wrap;
   gap: 4px;
   margin-bottom: 14px;
 }
 
 .typeBtn {
-  flex: 1;
-  padding: 5px 8px;
+  flex: 1 1 auto;
+  padding: 5px 6px;
   background: #1a1a26;
   border: 1px solid #3a3a4a;
   color: #8888a8;

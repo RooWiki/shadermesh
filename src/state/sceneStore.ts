@@ -2,7 +2,8 @@ import { create } from 'zustand'
 import { subscribeWithSelector } from 'zustand/middleware'
 import type { MeshObject, Transform } from '../core/MeshObject'
 import { createMeshObject } from '../core/MeshObject'
-import { createPlane, createCube, createSphere } from '../geometry/primitives'
+import { createPlane, createCube, createSphere, createCylinder, createCone, createTorus, createCapsule } from '../geometry/primitives'
+import type { CylinderParams, ConeParams, TorusParams, CapsuleParams } from '../geometry/primitives'
 import { recalculateFlatNormals, recalculateSmoothNormals } from '../geometry/normals'
 import { flipFace } from '../geometry/faces'
 import { calculateTangents } from '../geometry/tangents'
@@ -58,6 +59,10 @@ interface SceneState {
   addPlane: (params?: { width?: number; height?: number; subdivisionsX?: number; subdivisionsY?: number }) => string
   addCube: (params?: { width?: number; height?: number; depth?: number }) => string
   addSphere: (params?: { radius?: number; widthSegments?: number; heightSegments?: number }) => string
+  addCylinder: (params?: CylinderParams) => string
+  addCone: (params?: ConeParams) => string
+  addTorus: (params?: TorusParams) => string
+  addCapsule: (params?: CapsuleParams) => string
   importObject: (meshData: import('../core/MeshData').MeshData, name: string) => string
   removeObject: (id: string) => void
   renameObject: (id: string, name: string) => void
@@ -187,6 +192,46 @@ export const useSceneStore = create<SceneState>()(
       const id = nextId()
       const name = `Sphere.${String(objectCounter).padStart(3, '0')}`
       const meshData = createSphere(params)
+      const obj = createMeshObject(id, name, meshData)
+      set(s => ({ objects: [...s.objects, obj], selectedObjectId: id }))
+      return id
+    },
+
+    addCylinder: (params = {}) => {
+      get().pushHistory()
+      const id = nextId()
+      const name = `Cylinder.${String(objectCounter).padStart(3, '0')}`
+      const meshData = createCylinder(params)
+      const obj = createMeshObject(id, name, meshData)
+      set(s => ({ objects: [...s.objects, obj], selectedObjectId: id }))
+      return id
+    },
+
+    addCone: (params = {}) => {
+      get().pushHistory()
+      const id = nextId()
+      const name = `Cone.${String(objectCounter).padStart(3, '0')}`
+      const meshData = createCone(params)
+      const obj = createMeshObject(id, name, meshData)
+      set(s => ({ objects: [...s.objects, obj], selectedObjectId: id }))
+      return id
+    },
+
+    addTorus: (params = {}) => {
+      get().pushHistory()
+      const id = nextId()
+      const name = `Torus.${String(objectCounter).padStart(3, '0')}`
+      const meshData = createTorus(params)
+      const obj = createMeshObject(id, name, meshData)
+      set(s => ({ objects: [...s.objects, obj], selectedObjectId: id }))
+      return id
+    },
+
+    addCapsule: (params = {}) => {
+      get().pushHistory()
+      const id = nextId()
+      const name = `Capsule.${String(objectCounter).padStart(3, '0')}`
+      const meshData = createCapsule(params)
       const obj = createMeshObject(id, name, meshData)
       set(s => ({ objects: [...s.objects, obj], selectedObjectId: id }))
       return id
