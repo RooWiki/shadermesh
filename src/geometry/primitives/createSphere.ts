@@ -7,7 +7,7 @@ export interface SphereParams {
 }
 
 export function createSphere(params: SphereParams = {}): MeshData {
-  const { radius = 0.5, widthSegments = 16, heightSegments = 12 } = params
+  const { radius = 0.5, widthSegments = 32, heightSegments = 16 } = params
 
   const ws = Math.max(3, widthSegments)
   const hs = Math.max(2, heightSegments)

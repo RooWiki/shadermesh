@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useSceneStore } from '../../state/sceneStore'
-import type { EditorMode } from '../../state/sceneStore'
+import type { ActiveTool, EditorMode } from '../../state/sceneStore'
 import { AddObjectModal } from './AddObjectModal'
 import { pickTextFile } from '../../io/fileUtils'
 import { importOBJ } from '../../io/importOBJ'
@@ -13,6 +13,13 @@ const MODES: { id: EditorMode; label: string; key: string }[] = [
   { id: 'object', label: 'Object', key: '1' },
   { id: 'vertex', label: 'Vertex', key: '2' },
   { id: 'face', label: 'Face', key: '3' },
+]
+
+const TOOLS: { id: ActiveTool; label: string; icon: string; key: string }[] = [
+  { id: 'select',    label: 'Select',    icon: '↖', key: 'Q' },
+  { id: 'translate', label: 'Move',      icon: '✛', key: 'W' },
+  { id: 'rotate',    label: 'Rotate',    icon: '↻', key: 'E' },
+  { id: 'scale',     label: 'Scale',     icon: '⤢', key: 'R' },
 ]
 
 export function Toolbar() {
@@ -29,6 +36,8 @@ export function Toolbar() {
   const showVertexColors = useSceneStore(s => s.showVertexColors)
   const toggleVertexColors = useSceneStore(s => s.toggleVertexColors)
   const importObject = useSceneStore(s => s.importObject)
+  const activeTool = useSceneStore(s => s.activeTool)
+  const setActiveTool = useSceneStore(s => s.setActiveTool)
   const [showAddModal, setShowAddModal] = useState(false)
 
   const handleImport = async () => {
@@ -114,6 +123,22 @@ export function Toolbar() {
           >
             {WIREFRAME_ICONS.quad} Quads
           </button>
+        </div>
+
+        <div className={styles.divider} />
+
+        <div className={styles.modeGroup}>
+          {TOOLS.map(t => (
+            <button
+              key={t.id}
+              className={`${styles.modeBtn} ${activeTool === t.id ? styles.modeBtnActive : ''}`}
+              onClick={() => setActiveTool(t.id)}
+              title={`${t.label} (${t.key})`}
+            >
+              <span className={styles.modeBtnKey}>{t.key}</span>
+              {t.icon}
+            </button>
+          ))}
         </div>
 
         <div className={styles.divider} />

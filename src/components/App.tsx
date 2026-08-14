@@ -13,6 +13,9 @@ const DEFAULT_LEFT_WIDTH = 200
 
 function useGlobalShortcuts() {
   const setEditorMode = useSceneStore(s => s.setEditorMode)
+  const setActiveTool = useSceneStore(s => s.setActiveTool)
+  const removeObject = useSceneStore(s => s.removeObject)
+  const selectObject = useSceneStore(s => s.selectObject)
   const undo = useSceneStore(s => s.undo)
   const redo = useSceneStore(s => s.redo)
   useEffect(() => {
@@ -25,6 +28,16 @@ function useGlobalShortcuts() {
       }
       if (e.target instanceof HTMLInputElement) return
       switch (e.key) {
+        case 'Escape': selectObject(null); break
+        case 'Delete': case 'Backspace': {
+          const id = useSceneStore.getState().selectedObjectId
+          if (id) removeObject(id)
+          break
+        }
+        case 'q': case 'Q': setActiveTool('select'); break
+        case 'w': case 'W': setActiveTool('translate'); break
+        case 'e': case 'E': setActiveTool('rotate'); break
+        case 'r': case 'R': setActiveTool('scale'); break
         case '1': setEditorMode('object'); break
         case '2': setEditorMode('vertex'); break
         case '3': setEditorMode('face'); break
@@ -32,7 +45,7 @@ function useGlobalShortcuts() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [setEditorMode, undo, redo])
+  }, [setEditorMode, setActiveTool, removeObject, selectObject, undo, redo])
 }
 
 function usePanelResize(initialWidth: number, side: 'left' | 'right') {

@@ -4,13 +4,13 @@ import styles from './Inspector.module.css'
 
 interface Props {
   meshData: MeshData
-  selectedVertexIndex: number | null
+  selectedVertexIndices: number[]
   selectedFaceIndex: number | null
 }
 
 const CANVAS_SIZE = 512
 
-export function UVViewer({ meshData, selectedVertexIndex, selectedFaceIndex }: Props) {
+export function UVViewer({ meshData, selectedVertexIndices, selectedFaceIndex }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
@@ -98,24 +98,29 @@ export function UVViewer({ meshData, selectedVertexIndex, selectedFaceIndex }: P
       ctx.beginPath(); ctx.arc(px, py, 1.5, 0, Math.PI * 2); ctx.fill()
     }
 
-    // Selected vertex UV dot
-    if (selectedVertexIndex !== null) {
-      const u = uvs[selectedVertexIndex * 2]
-      const v = uvs[selectedVertexIndex * 2 + 1]
+    // Selected vertex UV dots
+    for (const vi of selectedVertexIndices) {
+      const u = uvs[vi * 2]
+      const v = uvs[vi * 2 + 1]
       const [px, py] = toCanvas(u, v)
       ctx.fillStyle = '#ffdd00'
       ctx.beginPath(); ctx.arc(px, py, 4.5, 0, Math.PI * 2); ctx.fill()
       ctx.strokeStyle = '#000'
       ctx.lineWidth = 1
       ctx.stroke()
+    }
 
-      // UV coordinates label
+    // UV label for first selected vertex
+    if (selectedVertexIndices.length === 1) {
+      const vi = selectedVertexIndices[0]
+      const u = uvs[vi * 2]
+      const v = uvs[vi * 2 + 1]
       ctx.fillStyle = '#ffdd00'
       ctx.font = '20px monospace'
       ctx.fillText(`${u.toFixed(3)}, ${v.toFixed(3)}`, pad, S - 6)
     }
 
-  }, [meshData, selectedVertexIndex, selectedFaceIndex])
+  }, [meshData, selectedVertexIndices, selectedFaceIndex])
 
   if (!meshData.uvs) return null
 

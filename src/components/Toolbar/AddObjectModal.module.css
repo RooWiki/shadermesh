@@ -85,10 +85,13 @@
   outline: none;
   font-family: monospace;
   transition: border-color 0.1s;
+  cursor: ew-resize;
+  text-align: right;
 }
 
 .input:focus {
   border-color: #5c7cfa;
+  cursor: text;
 }
 
 .hint {

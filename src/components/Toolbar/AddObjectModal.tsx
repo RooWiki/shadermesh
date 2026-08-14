@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useSceneStore } from '../../state/sceneStore'
+import { NumberInput } from '../Inspector/NumberInput'
 import styles from './AddObjectModal.module.css'
 
 type PrimitiveType = 'plane' | 'cube' | 'sphere'
@@ -18,8 +19,8 @@ export function AddObjectModal({ onClose }: AddObjectModalProps) {
   const [cubeH, setCubeH] = useState(1)
   const [cubeD, setCubeD] = useState(1)
   const [sphereR, setSphereR] = useState(0.5)
-  const [sphereWS, setSphereWS] = useState(16)
-  const [sphereHS, setSphereHS] = useState(12)
+  const [sphereWS, setSphereWS] = useState(32)
+  const [sphereHS, setSphereHS] = useState(16)
 
   const addPlane = useSceneStore(s => s.addPlane)
   const addCube = useSceneStore(s => s.addCube)
@@ -36,30 +37,28 @@ export function AddObjectModal({ onClose }: AddObjectModalProps) {
     onClose()
   }
 
-  const numInput = (label: string, value: number, set: (n: number) => void, min = 0.001, step = 0.1) => (
+  const field = (label: string, value: number, set: (n: number) => void, step = 0.1, decimals = 3, min = 0.001) => (
     <label className={styles.field}>
       <span className={styles.fieldLabel}>{label}</span>
-      <input
-        type="number"
+      <NumberInput
         className={styles.input}
         value={value}
         step={step}
-        min={min}
-        onChange={e => set(parseFloat(e.target.value) || min)}
+        decimals={decimals}
+        onChange={n => set(Math.max(min, n))}
       />
     </label>
   )
 
-  const intInput = (label: string, value: number, set: (n: number) => void, min = 1) => (
+  const intField = (label: string, value: number, set: (n: number) => void, min = 1) => (
     <label className={styles.field}>
       <span className={styles.fieldLabel}>{label}</span>
-      <input
-        type="number"
+      <NumberInput
         className={styles.input}
         value={value}
         step={1}
-        min={min}
-        onChange={e => set(Math.max(min, parseInt(e.target.value) || min))}
+        decimals={0}
+        onChange={n => set(Math.max(min, Math.round(n)))}
       />
     </label>
   )
@@ -84,10 +83,10 @@ export function AddObjectModal({ onClose }: AddObjectModalProps) {
         <div className={styles.fields}>
           {type === 'plane' && (
             <>
-              {numInput('Width', planeW, setPlaneW)}
-              {numInput('Height', planeH, setPlaneH)}
-              {intInput('Subdivisions X', planeSX, setPlaneSX)}
-              {intInput('Subdivisions Y', planeSY, setPlaneSY)}
+              {field('Width', planeW, setPlaneW)}
+              {field('Height', planeH, setPlaneH)}
+              {intField('Subdivisions X', planeSX, setPlaneSX)}
+              {intField('Subdivisions Y', planeSY, setPlaneSY)}
               <div className={styles.hint}>
                 {(planeSX + 1) * (planeSY + 1)} vertices · {planeSX * planeSY * 2} triangles
               </div>
@@ -95,17 +94,17 @@ export function AddObjectModal({ onClose }: AddObjectModalProps) {
           )}
           {type === 'cube' && (
             <>
-              {numInput('Width', cubeW, setCubeW)}
-              {numInput('Height', cubeH, setCubeH)}
-              {numInput('Depth', cubeD, setCubeD)}
+              {field('Width', cubeW, setCubeW)}
+              {field('Height', cubeH, setCubeH)}
+              {field('Depth', cubeD, setCubeD)}
               <div className={styles.hint}>24 vertices · 12 triangles</div>
             </>
           )}
           {type === 'sphere' && (
             <>
-              {numInput('Radius', sphereR, setSphereR)}
-              {intInput('Width Segments', sphereWS, setSphereWS, 3)}
-              {intInput('Height Segments', sphereHS, setSphereHS, 2)}
+              {field('Radius', sphereR, setSphereR)}
+              {intField('Width Segments', sphereWS, setSphereWS, 3)}
+              {intField('Height Segments', sphereHS, setSphereHS, 2)}
               <div className={styles.hint}>
                 {(sphereWS + 1) * (sphereHS + 1)} vertices
               </div>

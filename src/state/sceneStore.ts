@@ -9,6 +9,7 @@ import { calculateTangents } from '../geometry/tangents'
 
 export type EditorMode = 'object' | 'vertex' | 'face'
 export type WireframeMode = 'tri' | 'quad'
+export type ActiveTool = 'select' | 'translate' | 'rotate' | 'scale'
 
 const MAX_HISTORY = 50
 
@@ -36,8 +37,8 @@ function cloneObjects(objects: MeshObject[]): MeshObject[] {
 interface SceneState {
   objects: MeshObject[]
   selectedObjectId: string | null
-  selectedVertexIndex: number | null
-  selectedFaceIndex: number | null
+  selectedVertexIndices: number[]
+  selectedFaceIndices: number[]
   editorMode: EditorMode
   wireframeMode: WireframeMode
   gridVisible: boolean
@@ -71,12 +72,14 @@ interface SceneState {
 
   // Vertex editing
   selectVertex: (index: number | null) => void
+  selectVertices: (indices: number[]) => void
   updateVertexPosition: (objectId: string, index: number, position: [number, number, number]) => void
   updateVertexNormal: (objectId: string, index: number, normal: [number, number, number]) => void
   recalculateNormals: (objectId: string, type: 'flat' | 'smooth') => void
 
   // Face editing
   selectFace: (index: number | null) => void
+  selectFaces: (indices: number[]) => void
   flipFaceNormal: (objectId: string, faceIndex: number) => void
 
   // Tangents
@@ -88,13 +91,19 @@ interface SceneState {
   clearVertexColors: (objectId: string) => void
   updateVertexColor: (objectId: string, index: number, color: [number, number, number, number]) => void
 
-  // Mode / display
+  // Mode / display / tool
   setEditorMode: (mode: EditorMode) => void
   setWireframeMode: (mode: WireframeMode) => void
+  activeTool: ActiveTool
+  setActiveTool: (tool: ActiveTool) => void
+  setTransformSilent: (id: string, position: [number,number,number], rotation: [number,number,number], scale: [number,number,number]) => void
   toggleGrid: () => void
   toggleNormals: () => void
   toggleTangents: () => void
   toggleVertexColors: () => void
+
+  // Notify viewport that mesh geometry changed without pushing history
+  notifyMeshChanged: (objectId: string) => void
 
   // Utility
   getObject: (id: string) => MeshObject | undefined
@@ -105,8 +114,8 @@ export const useSceneStore = create<SceneState>()(
   subscribeWithSelector((set, get) => ({
     objects: [],
     selectedObjectId: null,
-    selectedVertexIndex: null,
-    selectedFaceIndex: null,
+    selectedVertexIndices: [],
+    selectedFaceIndices: [],
     editorMode: 'object',
     wireframeMode: 'tri',
     gridVisible: true,
@@ -114,6 +123,7 @@ export const useSceneStore = create<SceneState>()(
     showTangents: false,
     showVertexColors: false,
     hoveredObjectId: null,
+    activeTool: 'select' as ActiveTool,
     undoStack: [],
     redoStack: [],
 
@@ -204,12 +214,14 @@ export const useSceneStore = create<SceneState>()(
       set(s => ({ objects: s.objects.map(o => o.id === id ? { ...o, name: trimmed } : o) }))
     },
 
-    selectObject: (id) => set({ selectedObjectId: id, selectedVertexIndex: null, selectedFaceIndex: null }),
+    selectObject: (id) => set({ selectedObjectId: id, selectedVertexIndices: [], selectedFaceIndices: [] }),
     setHovered: (id) => set({ hoveredObjectId: id }),
 
-    selectVertex: (index) => set({ selectedVertexIndex: index }),
+    selectVertex: (index) => set({ selectedVertexIndices: index !== null ? [index] : [] }),
+    selectVertices: (indices) => set({ selectedVertexIndices: indices }),
 
-    selectFace: (index) => set({ selectedFaceIndex: index }),
+    selectFace: (index) => set({ selectedFaceIndices: index !== null ? [index] : [] }),
+    selectFaces: (indices) => set({ selectedFaceIndices: indices }),
 
     flipFaceNormal: (objectId, faceIndex) => {
       get().pushHistory()
@@ -342,8 +354,16 @@ export const useSceneStore = create<SceneState>()(
       }))
     },
 
-    setEditorMode: (mode) => set({ editorMode: mode, selectedVertexIndex: null, selectedFaceIndex: null }),
+    setEditorMode: (mode) => set({ editorMode: mode, selectedVertexIndices: [], selectedFaceIndices: [] }),
     setWireframeMode: (mode) => set({ wireframeMode: mode }),
+    setActiveTool: (tool) => set({ activeTool: tool }),
+    setTransformSilent: (id, position, rotation, scale) => {
+      set(s => ({
+        objects: s.objects.map(o =>
+          o.id === id ? { ...o, transform: { position, rotation, scale } } : o
+        ),
+      }))
+    },
 
     computeTangents: (objectId) => {
       get().pushHistory()
@@ -367,6 +387,14 @@ export const useSceneStore = create<SceneState>()(
     toggleNormals: () => set(s => ({ showNormals: !s.showNormals })),
     toggleTangents: () => set(s => ({ showTangents: !s.showTangents })),
     toggleVertexColors: () => set(s => ({ showVertexColors: !s.showVertexColors })),
+
+    notifyMeshChanged: (objectId) => {
+      set(s => ({
+        objects: s.objects.map(o =>
+          o.id !== objectId ? o : { ...o, meshData: { ...o.meshData } }
+        ),
+      }))
+    },
 
     getObject: (id) => get().objects.find(o => o.id === id),
     getSelectedObject: () => {

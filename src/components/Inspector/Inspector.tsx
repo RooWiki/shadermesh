@@ -2,8 +2,8 @@ import { useState, useRef, useEffect } from 'react'
 import { useSceneStore } from '../../state/sceneStore'
 import { TransformPanel } from './TransformPanel'
 import { MeshDataPanel } from './MeshDataPanel'
-import { VertexPanel } from './VertexPanel'
-import { FacePanel } from './FacePanel'
+import { VertexPanel, VertexGroupPanel } from './VertexPanel'
+import { FacePanel, FaceGroupPanel } from './FacePanel'
 import { UVViewer } from './UVViewer'
 import styles from './Inspector.module.css'
 
@@ -33,8 +33,8 @@ function InlineRename({ value, onCommit }: { value: string; onCommit: (n: string
 
 export function Inspector() {
   const selectedId = useSceneStore(s => s.selectedObjectId)
-  const selectedVertexIndex = useSceneStore(s => s.selectedVertexIndex)
-  const selectedFaceIndex = useSceneStore(s => s.selectedFaceIndex)
+  const selectedVertexIndices = useSceneStore(s => s.selectedVertexIndices)
+  const selectedFaceIndices = useSceneStore(s => s.selectedFaceIndices)
   const editorMode = useSceneStore(s => s.editorMode)
   const objects = useSceneStore(s => s.objects)
   const updateTransform = useSceneStore(s => s.updateTransform)
@@ -80,27 +80,35 @@ export function Inspector() {
             </>
           )}
 
-          {editorMode === 'vertex' && selectedVertexIndex === null && (
-            <div className={styles.empty}>Click a vertex to select it</div>
+          {editorMode === 'vertex' && selectedVertexIndices.length === 0 && (
+            <div className={styles.empty}>Click a vertex or drag right-click to box-select</div>
           )}
 
-          {editorMode === 'vertex' && selectedVertexIndex !== null && (
-            <VertexPanel objectId={obj.id} vertexIndex={selectedVertexIndex} />
+          {editorMode === 'vertex' && selectedVertexIndices.length > 1 && (
+            <VertexGroupPanel objectId={obj.id} vertexIndices={selectedVertexIndices} />
           )}
 
-          {editorMode === 'face' && selectedFaceIndex === null && (
-            <div className={styles.empty}>Click a face to select it</div>
+          {editorMode === 'vertex' && selectedVertexIndices.length === 1 && (
+            <VertexPanel objectId={obj.id} vertexIndex={selectedVertexIndices[0]} />
           )}
 
-          {editorMode === 'face' && selectedFaceIndex !== null && (
-            <FacePanel objectId={obj.id} faceIndex={selectedFaceIndex} />
+          {editorMode === 'face' && selectedFaceIndices.length === 0 && (
+            <div className={styles.empty}>Click a face or drag right-click to box-select</div>
+          )}
+
+          {editorMode === 'face' && selectedFaceIndices.length > 1 && (
+            <FaceGroupPanel objectId={obj.id} faceIndices={selectedFaceIndices} />
+          )}
+
+          {editorMode === 'face' && selectedFaceIndices.length === 1 && (
+            <FacePanel objectId={obj.id} faceIndex={selectedFaceIndices[0]} />
           )}
 
           {obj.meshData.uvs && (
             <UVViewer
               meshData={obj.meshData}
-              selectedVertexIndex={editorMode === 'vertex' ? selectedVertexIndex : null}
-              selectedFaceIndex={editorMode === 'face' ? selectedFaceIndex : null}
+              selectedVertexIndices={editorMode === 'vertex' ? selectedVertexIndices : []}
+              selectedFaceIndex={editorMode === 'face' && selectedFaceIndices.length === 1 ? selectedFaceIndices[0] : null}
             />
           )}
         </>

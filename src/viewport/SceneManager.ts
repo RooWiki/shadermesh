@@ -1,13 +1,17 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
+import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js'
 import type { MeshObject } from '../core/MeshObject'
 import type { MeshData } from '../core/MeshData'
-import type { EditorMode, WireframeMode } from '../state/sceneStore'
+import type { ActiveTool, EditorMode, WireframeMode } from '../state/sceneStore'
 import { meshDataToBufferGeometry } from './MeshRenderer'
 
 type SelectCallback = (id: string | null) => void
 type SelectVertexCallback = (index: number | null) => void
 type SelectFaceCallback = (index: number | null) => void
+type PushHistoryCallback = () => void
+type TransformChangeCallback = (id: string, position: [number,number,number], rotation: [number,number,number], scale: [number,number,number]) => void
+type NotifyMeshChangedCallback = (id: string) => void
 
 const VERTEX_COLOR_DEFAULT = [0.35, 0.55, 0.95] as const
 const VERTEX_COLOR_SELECTED = [1.0, 0.85, 0.1] as const
@@ -24,21 +28,33 @@ export class SceneManager {
   private wireframeMap = new Map<string, THREE.LineSegments>()
   private meshDataRefMap = new Map<string, MeshData>()
 
+  private transformControls: TransformControls
+  private activeTool: ActiveTool = 'select'
+  private gizmoDragActive = false
+
+  // Sub-object transform state
+  private selectionPivot: THREE.Object3D | null = null
+  private pivotBaseMatrix = new THREE.Matrix4()
+  private baseVertexPositions: Float32Array | null = null
+
   private selectedId: string | null = null
   private onSelect: SelectCallback
   private onSelectVertex: SelectVertexCallback
   private onSelectFace: SelectFaceCallback
+  private onPushHistory: PushHistoryCallback
+  private onTransformChange: TransformChangeCallback
+  private onNotifyMeshChanged: NotifyMeshChangedCallback
   private wireframeMode: WireframeMode = 'tri'
   private currentMode: EditorMode = 'object'
   private currentObjects: MeshObject[] = []
 
   // Vertex overlay (only for selected object in vertex mode)
   private vertexPoints: THREE.Points | null = null
-  private selectedVertexIndex: number | null = null
+  private selectedVertexIndices: number[] = []
 
   // Face overlay (only for selected object in face mode)
   private faceHighlight: THREE.Mesh | null = null
-  private selectedFaceIndex: number | null = null
+  private selectedFaceIndices: number[] = []
 
   // Normal overlay
   private normalLines: THREE.LineSegments | null = null
@@ -53,8 +69,8 @@ export class SceneManager {
   private animFrameId = 0
   private container: HTMLDivElement
 
-  private defaultMat: THREE.MeshLambertMaterial
-  private selectedMat: THREE.MeshLambertMaterial
+  private defaultMat: THREE.MeshPhongMaterial
+  private selectedMat: THREE.MeshPhongMaterial
   private vcMat: THREE.MeshBasicMaterial
   private wireframeMat: THREE.LineBasicMaterial
   private selectedWireframeMat: THREE.LineBasicMaterial
@@ -66,11 +82,17 @@ export class SceneManager {
     onSelect: SelectCallback,
     onSelectVertex: SelectVertexCallback,
     onSelectFace: SelectFaceCallback,
+    onPushHistory: PushHistoryCallback,
+    onTransformChange: TransformChangeCallback,
+    onNotifyMeshChanged: NotifyMeshChangedCallback,
   ) {
     this.container = container
     this.onSelect = onSelect
     this.onSelectVertex = onSelectVertex
     this.onSelectFace = onSelectFace
+    this.onPushHistory = onPushHistory
+    this.onTransformChange = onTransformChange
+    this.onNotifyMeshChanged = onNotifyMeshChanged
 
     const { clientWidth: w, clientHeight: h } = container
 
@@ -103,8 +125,8 @@ export class SceneManager {
     this.scene.add(this.gridHelper)
     this.scene.add(new THREE.AxesHelper(0.5))
 
-    this.defaultMat = new THREE.MeshLambertMaterial({ color: 0x5a7cba })
-    this.selectedMat = new THREE.MeshLambertMaterial({ color: 0x7aace0, emissive: 0x112233, emissiveIntensity: 0.3 })
+    this.defaultMat = new THREE.MeshPhongMaterial({ color: 0x5a7cba, shininess: 18, specular: 0x223355 })
+    this.selectedMat = new THREE.MeshPhongMaterial({ color: 0x7aace0, emissive: 0x112233, emissiveIntensity: 0.3, shininess: 18, specular: 0x334466 })
     this.vcMat = new THREE.MeshBasicMaterial({ vertexColors: true })
     this.wireframeMat = new THREE.LineBasicMaterial({ color: 0x2244aa, transparent: true, opacity: 0.4 })
     this.selectedWireframeMat = new THREE.LineBasicMaterial({ color: 0xf0a050, transparent: true, opacity: 0.8 })
@@ -122,6 +144,61 @@ export class SceneManager {
     this.orbitControls.screenSpacePanning = true
     this.orbitControls.minDistance = 0.1
     this.orbitControls.maxDistance = 500
+
+    this.transformControls = new TransformControls(this.camera, this.renderer.domElement)
+    this.transformControls.setSize(0.85)
+    this.scene.add(this.transformControls.getHelper())
+
+    // Pause orbit while dragging gizmo
+    this.transformControls.addEventListener('dragging-changed', (e: any) => {
+      this.orbitControls.enabled = !e.value
+    })
+
+    // Push history on first actual movement (lazy — no spurious undo entry if gizmo not moved)
+    let historyPushedThisDrag = false
+    this.transformControls.addEventListener('mouseDown', () => {
+      historyPushedThisDrag = false
+      this.gizmoDragActive = true
+      if (this.currentMode !== 'object' && this.selectionPivot) {
+        // Snapshot pivot base matrix and selected vertex positions for delta computation
+        this.selectionPivot.updateWorldMatrix(true, false)
+        this.pivotBaseMatrix.copy(this.selectionPivot.matrixWorld)
+        this.snapshotBaseVertexPositions()
+      }
+    })
+    this.transformControls.addEventListener('objectChange', () => {
+      if (!historyPushedThisDrag) {
+        this.onPushHistory()
+        historyPushedThisDrag = true
+      }
+      if (this.currentMode !== 'object') {
+        this.applyPivotTransformToMesh()
+      }
+    })
+    this.transformControls.addEventListener('mouseUp', () => {
+      if (this.currentMode !== 'object') {
+        // Sync modified vertex positions to store and reset pivot to new centroid
+        this.syncVerticesToStore()
+        this.baseVertexPositions = null
+        this.updateSelectionPivot()
+      } else {
+        // Object mode: sync final object transform to store
+        const attached = this.transformControls.object
+        if (attached && this.selectedId) {
+          const p = attached.position
+          const r = attached.rotation
+          const s = attached.scale
+          this.onTransformChange(
+            this.selectedId,
+            [p.x, p.y, p.z],
+            [r.x, r.y, r.z],
+            [s.x, s.y, s.z],
+          )
+        }
+      }
+      // Reset flag after current event loop so onPointerUp can still read it
+      setTimeout(() => { this.gizmoDragActive = false }, 0)
+    })
 
     this.renderer.domElement.addEventListener('pointerdown', this.onPointerDown)
 
@@ -161,6 +238,7 @@ export class SceneManager {
   private onPointerUp = (e: PointerEvent) => {
     if (this.pointerMoved) return
     if (e.button !== 0) return
+    if (this.gizmoDragActive) return
     if (this.currentMode === 'vertex') {
       this.pickVertex(e)
     } else if (this.currentMode === 'face') {
@@ -250,7 +328,10 @@ export class SceneManager {
         this.addMeshToScene(obj)
       } else {
         this.updateMeshGeometryIfChanged(obj)
-        this.updateMeshTransform(obj)
+        // Don't overwrite TC-controlled transform mid-drag — would snap mesh to old store position
+        if (!(this.gizmoDragActive && this.currentMode === 'object' && obj.id === this.selectedId)) {
+          this.updateMeshTransform(obj)
+        }
       }
     }
 
@@ -259,8 +340,16 @@ export class SceneManager {
     }
   }
 
+  setActiveTool(tool: ActiveTool) {
+    this.activeTool = tool
+    this.updateGizmoAttachment()
+  }
+
   setEditorMode(mode: EditorMode) {
     this.currentMode = mode
+    // In vertex/face mode disable right-click orbit pan so box-select can use it
+    ;(this.orbitControls.mouseButtons as any).RIGHT = (mode === 'vertex' || mode === 'face') ? null : THREE.MOUSE.PAN
+    this.updateGizmoAttachment()
     if (mode === 'vertex' && this.selectedId) {
       const obj = this.currentObjects.find(o => o.id === this.selectedId)
       if (obj) this.buildVertexOverlay(obj.meshData)
@@ -272,19 +361,104 @@ export class SceneManager {
     }
   }
 
+  private updateGizmoAttachment() {
+    const modeMap = { translate: 'translate', rotate: 'rotate', scale: 'scale' } as const
+
+    if (this.currentMode === 'object') {
+      // Clean up any sub-object pivot
+      if (this.selectionPivot) {
+        this.scene.remove(this.selectionPivot)
+        this.selectionPivot = null
+      }
+      const mesh = this.selectedId ? this.meshMap.get(this.selectedId) : undefined
+      if (this.activeTool !== 'select' && mesh) {
+        this.transformControls.attach(mesh)
+        this.transformControls.setMode(modeMap[this.activeTool as 'translate' | 'rotate' | 'scale'])
+      } else {
+        this.transformControls.detach()
+      }
+    } else {
+      // Vertex / face mode — use selection pivot
+      this.updateSelectionPivot()
+    }
+  }
+
   selectVertex(index: number | null) {
-    this.selectedVertexIndex = index
+    this.selectVertices(index !== null ? [index] : [])
+  }
+
+  selectVertices(indices: number[]) {
+    this.selectedVertexIndices = indices
     this.updateVertexHighlight()
+    this.updateGizmoAttachment()
+  }
+
+  getVerticesInBox(ndcX1: number, ndcY1: number, ndcX2: number, ndcY2: number): number[] {
+    if (!this.selectedId) return []
+    const obj = this.currentObjects.find(o => o.id === this.selectedId)
+    const mesh = this.meshMap.get(this.selectedId)
+    if (!obj || !mesh) return []
+
+    const { positions } = obj.meshData
+    const count = positions.length / 3
+    const result: number[] = []
+    const minX = Math.min(ndcX1, ndcX2)
+    const maxX = Math.max(ndcX1, ndcX2)
+    const minY = Math.min(ndcY1, ndcY2)
+    const maxY = Math.max(ndcY1, ndcY2)
+
+    const v = new THREE.Vector3()
+    for (let i = 0; i < count; i++) {
+      v.set(positions[i*3], positions[i*3+1], positions[i*3+2])
+      v.applyMatrix4(mesh.matrixWorld)
+      v.project(this.camera)
+      if (v.z > 1) continue  // behind camera
+      if (v.x >= minX && v.x <= maxX && v.y >= minY && v.y <= maxY) result.push(i)
+    }
+    return result
   }
 
   selectFace(index: number | null) {
-    this.selectedFaceIndex = index
-    if (index !== null && this.selectedId) {
+    this.selectFaces(index !== null ? [index] : [])
+  }
+
+  selectFaces(indices: number[]) {
+    this.selectedFaceIndices = indices
+    if (indices.length > 0 && this.selectedId) {
       const obj = this.currentObjects.find(o => o.id === this.selectedId)
-      if (obj) this.buildFaceHighlight(obj.meshData, index)
+      if (obj) this.buildFaceHighlight(obj.meshData, indices)
     } else {
       this.clearFaceHighlight()
     }
+    this.updateGizmoAttachment()
+  }
+
+  getFacesInBox(ndcX1: number, ndcY1: number, ndcX2: number, ndcY2: number): number[] {
+    if (!this.selectedId) return []
+    const obj = this.currentObjects.find(o => o.id === this.selectedId)
+    const mesh = this.meshMap.get(this.selectedId)
+    if (!obj || !mesh) return []
+
+    const { positions, indices } = obj.meshData
+    const triCount = indices.length / 3
+    const result: number[] = []
+    const minX = Math.min(ndcX1, ndcX2), maxX = Math.max(ndcX1, ndcX2)
+    const minY = Math.min(ndcY1, ndcY2), maxY = Math.max(ndcY1, ndcY2)
+
+    const v = new THREE.Vector3()
+    for (let t = 0; t < triCount; t++) {
+      const a = indices[t*3], b = indices[t*3+1], c = indices[t*3+2]
+      v.set(
+        (positions[a*3] + positions[b*3] + positions[c*3]) / 3,
+        (positions[a*3+1] + positions[b*3+1] + positions[c*3+1]) / 3,
+        (positions[a*3+2] + positions[b*3+2] + positions[c*3+2]) / 3,
+      )
+      v.applyMatrix4(mesh.matrixWorld)
+      v.project(this.camera)
+      if (v.z > 1) continue
+      if (v.x >= minX && v.x <= maxX && v.y >= minY && v.y <= maxY) result.push(t)
+    }
+    return result
   }
 
   setWireframeMode(mode: WireframeMode) {
@@ -392,10 +566,10 @@ export class SceneManager {
     if (obj.id === this.selectedId) {
       if (this.currentMode === 'vertex') {
         this.buildVertexOverlay(obj.meshData)
-        if (this.selectedVertexIndex !== null) this.updateVertexHighlight()
+        this.updateVertexHighlight()
       }
-      if (this.currentMode === 'face' && this.selectedFaceIndex !== null) {
-        this.buildFaceHighlight(obj.meshData, this.selectedFaceIndex)
+      if (this.currentMode === 'face' && this.selectedFaceIndices.length > 0) {
+        this.buildFaceHighlight(obj.meshData, this.selectedFaceIndices)
       }
       if (this.showNormals) this.buildNormalOverlay(obj.meshData)
       if (this.showTangents) this.buildTangentOverlay(obj.meshData)
@@ -435,6 +609,7 @@ export class SceneManager {
     this.clearFaceHighlight()
     this.clearNormalOverlay()
     this.clearTangentOverlay()
+    this.updateGizmoAttachment()
 
     if (id) {
       const mesh = this.meshMap.get(id)
@@ -476,27 +651,145 @@ export class SceneManager {
     return new THREE.LineSegments(wfGeo, this.wireframeMat.clone())
   }
 
+  // ── Sub-object transforms ────────────────────────────────────
+
+  private getSelectionVertexIndicesForMode(): number[] {
+    if (this.currentMode === 'vertex') return this.selectedVertexIndices
+    if (this.currentMode === 'face') {
+      const obj = this.currentObjects.find(o => o.id === this.selectedId)
+      if (!obj) return []
+      const { indices } = obj.meshData
+      const set = new Set<number>()
+      for (const fi of this.selectedFaceIndices) {
+        set.add(indices[fi*3])
+        set.add(indices[fi*3+1])
+        set.add(indices[fi*3+2])
+      }
+      return Array.from(set)
+    }
+    return []
+  }
+
+  private getSelectionCentroid(): THREE.Vector3 | null {
+    const vertexIndices = this.getSelectionVertexIndicesForMode()
+    if (vertexIndices.length === 0 || !this.selectedId) return null
+    const obj = this.currentObjects.find(o => o.id === this.selectedId)
+    const mesh = this.meshMap.get(this.selectedId)
+    if (!obj || !mesh) return null
+    const { positions } = obj.meshData
+    const c = new THREE.Vector3()
+    for (const vi of vertexIndices) {
+      c.x += positions[vi*3]; c.y += positions[vi*3+1]; c.z += positions[vi*3+2]
+    }
+    c.divideScalar(vertexIndices.length)
+    c.applyMatrix4(mesh.matrixWorld)
+    return c
+  }
+
+  private updateSelectionPivot() {
+    if (this.selectionPivot) { this.scene.remove(this.selectionPivot); this.selectionPivot = null }
+    this.transformControls.detach()
+    const vertexIndices = this.getSelectionVertexIndicesForMode()
+    if (vertexIndices.length === 0 || this.activeTool === 'select') return
+    const centroid = this.getSelectionCentroid()
+    if (!centroid) return
+    this.selectionPivot = new THREE.Object3D()
+    this.selectionPivot.position.copy(centroid)
+    this.scene.add(this.selectionPivot)
+    this.transformControls.attach(this.selectionPivot)
+    const modeMap = { translate: 'translate', rotate: 'rotate', scale: 'scale' } as const
+    this.transformControls.setMode(modeMap[this.activeTool as 'translate' | 'rotate' | 'scale'])
+  }
+
+  private snapshotBaseVertexPositions() {
+    const vertexIndices = this.getSelectionVertexIndicesForMode()
+    if (vertexIndices.length === 0 || !this.selectedId) { this.baseVertexPositions = null; return }
+    const obj = this.currentObjects.find(o => o.id === this.selectedId)
+    if (!obj) { this.baseVertexPositions = null; return }
+    const { positions } = obj.meshData
+    this.baseVertexPositions = new Float32Array(vertexIndices.length * 3)
+    vertexIndices.forEach((vi, idx) => {
+      this.baseVertexPositions![idx*3]   = positions[vi*3]
+      this.baseVertexPositions![idx*3+1] = positions[vi*3+1]
+      this.baseVertexPositions![idx*3+2] = positions[vi*3+2]
+    })
+  }
+
+  private applyPivotTransformToMesh() {
+    if (!this.selectionPivot || !this.baseVertexPositions || !this.selectedId) return
+    const obj = this.currentObjects.find(o => o.id === this.selectedId)
+    const mesh = this.meshMap.get(this.selectedId)
+    if (!obj || !mesh) return
+    const vertexIndices = this.getSelectionVertexIndicesForMode()
+    if (vertexIndices.length === 0) return
+
+    // Delta in world space: mDelta = mCurrent * inverse(mBase)
+    this.selectionPivot.updateWorldMatrix(true, false)
+    const mDelta = this.selectionPivot.matrixWorld.clone().multiply(
+      this.pivotBaseMatrix.clone().invert()
+    )
+    // Transform in local mesh space: v_new = mWorldInv * mDelta * mWorld * v_base
+    mesh.updateWorldMatrix(true, false)
+    const mTransform = mesh.matrixWorld.clone().invert().multiply(mDelta).multiply(mesh.matrixWorld)
+
+    const { positions } = obj.meshData
+    const v = new THREE.Vector3()
+    vertexIndices.forEach((vi, idx) => {
+      v.set(this.baseVertexPositions![idx*3], this.baseVertexPositions![idx*3+1], this.baseVertexPositions![idx*3+2])
+      v.applyMatrix4(mTransform)
+      positions[vi*3] = v.x; positions[vi*3+1] = v.y; positions[vi*3+2] = v.z
+    })
+
+    // Flag GPU upload (buffer is shared with geometry since MeshRenderer doesn't copy)
+    ;(mesh.geometry.attributes.position as THREE.BufferAttribute).needsUpdate = true
+
+    this.refreshOverlaysDuringDrag(obj.meshData)
+  }
+
+  private refreshOverlaysDuringDrag(meshData: MeshData) {
+    const { positions } = meshData
+
+    if (this.vertexPoints) {
+      const attr = this.vertexPoints.geometry.attributes.position as THREE.BufferAttribute
+      ;(attr.array as Float32Array).set(positions)
+      attr.needsUpdate = true
+    }
+    if (this.currentMode === 'face' && this.selectedFaceIndices.length > 0) {
+      this.buildFaceHighlight(meshData, this.selectedFaceIndices)
+    }
+  }
+
+  private syncVerticesToStore() {
+    if (!this.selectedId) return
+    const obj = this.currentObjects.find(o => o.id === this.selectedId)
+    const mesh = this.meshMap.get(this.selectedId)
+    if (obj && mesh && obj.meshData.normals) {
+      // Recompute normals in geometry and copy back to meshData
+      mesh.geometry.computeVertexNormals()
+      const normalAttr = mesh.geometry.attributes.normal as THREE.BufferAttribute
+      obj.meshData.normals!.set(normalAttr.array as Float32Array)
+    }
+    this.onNotifyMeshChanged(this.selectedId)
+  }
+
   // ── Face highlight ───────────────────────────────────────────
 
-  private buildFaceHighlight(meshData: MeshData, faceIndex: number) {
+  private buildFaceHighlight(meshData: MeshData, faceIndices: number[]) {
     this.clearFaceHighlight()
     const mesh = this.meshMap.get(this.selectedId!)
-    if (!mesh) return
+    if (!mesh || faceIndices.length === 0) return
 
     const { positions, indices } = meshData
-    const a = indices[faceIndex * 3]
-    const b = indices[faceIndex * 3 + 1]
-    const c = indices[faceIndex * 3 + 2]
-
-    const verts = new Float32Array([
-      positions[a*3], positions[a*3+1], positions[a*3+2],
-      positions[b*3], positions[b*3+1], positions[b*3+2],
-      positions[c*3], positions[c*3+1], positions[c*3+2],
-    ])
+    const verts = new Float32Array(faceIndices.length * 9)
+    faceIndices.forEach((fi, i) => {
+      const a = indices[fi*3], b = indices[fi*3+1], c = indices[fi*3+2]
+      verts[i*9+0] = positions[a*3];   verts[i*9+1] = positions[a*3+1]; verts[i*9+2] = positions[a*3+2]
+      verts[i*9+3] = positions[b*3];   verts[i*9+4] = positions[b*3+1]; verts[i*9+5] = positions[b*3+2]
+      verts[i*9+6] = positions[c*3];   verts[i*9+7] = positions[c*3+1]; verts[i*9+8] = positions[c*3+2]
+    })
 
     const geo = new THREE.BufferGeometry()
     geo.setAttribute('position', new THREE.BufferAttribute(verts, 3))
-
     this.faceHighlight = new THREE.Mesh(geo, this.faceHighlightMat)
     mesh.add(this.faceHighlight)
   }
@@ -619,7 +912,6 @@ export class SceneManager {
     this.vertexPoints.geometry.dispose()
     ;(this.vertexPoints.material as THREE.PointsMaterial).dispose()
     this.vertexPoints = null
-    this.selectedVertexIndex = null
   }
 
   private updateVertexHighlight() {
@@ -628,13 +920,11 @@ export class SceneManager {
     const count = colors.count
     const [dr, dg, db] = VERTEX_COLOR_DEFAULT
     const [sr, sg, sb] = VERTEX_COLOR_SELECTED
+    const selected = new Set(this.selectedVertexIndices)
 
     for (let i = 0; i < count; i++) {
-      if (i === this.selectedVertexIndex) {
-        colors.setXYZ(i, sr, sg, sb)
-      } else {
-        colors.setXYZ(i, dr, dg, db)
-      }
+      if (selected.has(i)) colors.setXYZ(i, sr, sg, sb)
+      else colors.setXYZ(i, dr, dg, db)
     }
     colors.needsUpdate = true
   }
@@ -715,7 +1005,10 @@ export class SceneManager {
     this.clearFaceHighlight()
     this.clearNormalOverlay()
     this.clearTangentOverlay()
+    if (this.selectionPivot) { this.scene.remove(this.selectionPivot); this.selectionPivot = null }
     for (const [id] of this.meshMap) this.removeMeshFromScene(id)
+    this.transformControls.detach()
+    this.transformControls.dispose()
     this.orbitControls.dispose()
     this.renderer.dispose()
     this.container.removeChild(this.renderer.domElement)

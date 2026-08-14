@@ -35,6 +35,34 @@ function AxisRow({ labels, values, step = 0.001, decimals = 4, readOnly = false,
   )
 }
 
+interface VertexGroupPanelProps {
+  objectId: string
+  vertexIndices: number[]
+}
+
+export function VertexGroupPanel({ objectId, vertexIndices }: VertexGroupPanelProps) {
+  const obj = useSceneStore(s => s.objects.find(o => o.id === objectId))
+  if (!obj) return null
+
+  const { positions } = obj.meshData
+  let cx = 0, cy = 0, cz = 0
+  for (const vi of vertexIndices) {
+    cx += positions[vi*3]; cy += positions[vi*3+1]; cz += positions[vi*3+2]
+  }
+  const n = vertexIndices.length
+  cx /= n; cy /= n; cz /= n
+
+  return (
+    <div className={styles.section}>
+      <div className={styles.sectionTitle}>{n} Vertices Selected</div>
+      <div className={styles.vec3Block}>
+        <div className={styles.vec3Label}>Centroid</div>
+        <AxisRow labels={['X', 'Y', 'Z']} values={[cx, cy, cz]} readOnly />
+      </div>
+    </div>
+  )
+}
+
 interface VertexPanelProps {
   objectId: string
   vertexIndex: number
