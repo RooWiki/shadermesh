@@ -3,6 +3,7 @@ import { TransformPanel } from './TransformPanel'
 import { MeshDataPanel } from './MeshDataPanel'
 import { VertexPanel } from './VertexPanel'
 import { FacePanel } from './FacePanel'
+import { UVViewer } from './UVViewer'
 import styles from './Inspector.module.css'
 
 export function Inspector() {
@@ -54,6 +55,14 @@ export function Inspector() {
 
           {editorMode === 'face' && selectedFaceIndex !== null && (
             <FacePanel objectId={obj.id} faceIndex={selectedFaceIndex} />
+          )}
+
+          {obj.meshData.uvs && (
+            <UVViewer
+              meshData={obj.meshData}
+              selectedVertexIndex={editorMode === 'vertex' ? selectedVertexIndex : null}
+              selectedFaceIndex={editorMode === 'face' ? selectedFaceIndex : null}
+            />
           )}
         </>
       )}

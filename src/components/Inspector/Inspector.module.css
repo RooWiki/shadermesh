@@ -212,3 +212,16 @@
   color: #d0d0e8;
   font-weight: 600;
 }
+
+/* UV Viewer */
+.uvViewer {
+  border-top: 1px solid #2a2a36;
+  flex-shrink: 0;
+}
+
+.uvCanvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+}
