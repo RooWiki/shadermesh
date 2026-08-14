@@ -2,6 +2,9 @@ import { useState } from 'react'
 import { useSceneStore } from '../../state/sceneStore'
 import type { EditorMode } from '../../state/sceneStore'
 import { AddObjectModal } from './AddObjectModal'
+import { pickTextFile } from '../../io/fileUtils'
+import { importOBJ } from '../../io/importOBJ'
+import { importJSON } from '../../io/importJSON'
 import styles from './Toolbar.module.css'
 
 const WIREFRAME_ICONS = { tri: '△', quad: '◻' } as const
@@ -25,7 +28,25 @@ export function Toolbar() {
   const toggleTangents = useSceneStore(s => s.toggleTangents)
   const showVertexColors = useSceneStore(s => s.showVertexColors)
   const toggleVertexColors = useSceneStore(s => s.toggleVertexColors)
+  const importObject = useSceneStore(s => s.importObject)
   const [showAddModal, setShowAddModal] = useState(false)
+
+  const handleImport = async () => {
+    try {
+      const { name, content } = await pickTextFile('.obj,.json')
+      const ext = name.split('.').pop()?.toLowerCase()
+      if (ext === 'obj') {
+        const meshData = importOBJ(content)
+        const baseName = name.replace(/\.obj$/i, '')
+        importObject(meshData, baseName)
+      } else if (ext === 'json') {
+        const { name: jsonName, meshData } = importJSON(content)
+        importObject(meshData, jsonName)
+      }
+    } catch {
+      // User cancelled file picker — do nothing
+    }
+  }
 
   return (
     <>
@@ -36,6 +57,10 @@ export function Toolbar() {
 
         <button className={styles.addBtn} onClick={() => setShowAddModal(true)}>
           + Add Object
+        </button>
+
+        <button className={styles.addBtn} onClick={handleImport} title="Import OBJ or JSON file">
+          ↑ Import
         </button>
 
         <div className={styles.divider} />

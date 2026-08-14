@@ -32,6 +32,7 @@ interface SceneState {
   addPlane: (params?: { width?: number; height?: number; subdivisionsX?: number; subdivisionsY?: number }) => string
   addCube: (params?: { width?: number; height?: number; depth?: number }) => string
   addSphere: (params?: { radius?: number; widthSegments?: number; heightSegments?: number }) => string
+  importObject: (meshData: import('../core/MeshData').MeshData, name: string) => string
   removeObject: (id: string) => void
   selectObject: (id: string | null) => void
   setHovered: (id: string | null) => void
@@ -110,6 +111,13 @@ export const useSceneStore = create<SceneState>()(
       const id = nextId()
       const name = `Sphere.${String(objectCounter).padStart(3, '0')}`
       const meshData = createSphere(params)
+      const obj = createMeshObject(id, name, meshData)
+      set(s => ({ objects: [...s.objects, obj], selectedObjectId: id }))
+      return id
+    },
+
+    importObject: (meshData, name) => {
+      const id = nextId()
       const obj = createMeshObject(id, name, meshData)
       set(s => ({ objects: [...s.objects, obj], selectedObjectId: id }))
       return id

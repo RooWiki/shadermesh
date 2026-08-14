@@ -1,6 +1,9 @@
 import { getMeshStats } from '../../core/MeshData'
 import type { MeshObject } from '../../core/MeshObject'
 import { useSceneStore } from '../../state/sceneStore'
+import { exportOBJ } from '../../io/exportOBJ'
+import { exportJSON } from '../../io/exportJSON'
+import { downloadText } from '../../io/fileUtils'
 import styles from './Inspector.module.css'
 
 function formatBytes(b: number): string {
@@ -58,6 +61,24 @@ export function MeshDataPanel({ obj }: Props) {
             {stats.hasColors ? '✓' : '✗'}
           </span>
         </div>
+      </div>
+
+      <div className={styles.sectionSubtitle}>Export</div>
+      <div className={styles.actionRow}>
+        <button
+          className={styles.actionBtn}
+          onClick={() => downloadText(exportOBJ(obj.meshData, obj.name), `${obj.name}.obj`)}
+          title="Export as Wavefront OBJ (positions, normals, UVs)"
+        >
+          OBJ
+        </button>
+        <button
+          className={styles.actionBtn}
+          onClick={() => downloadText(exportJSON(obj.meshData, obj.name), `${obj.name}.json`)}
+          title="Export as JSON (all attributes: positions, normals, UVs, tangents, colors)"
+        >
+          JSON
+        </button>
       </div>
 
       <div className={styles.sectionSubtitle}>Normals</div>
