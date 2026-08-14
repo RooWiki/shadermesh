@@ -369,8 +369,8 @@ export class SceneManager {
     const oldWf = this.wireframeMap.get(obj.id)
     if (oldWf) { mesh.remove(oldWf); oldWf.geometry.dispose() }
     const wf = this.buildWireframe(mesh.geometry)
-    const mat = obj.id === this.selectedId ? this.selectedWireframeMat : this.wireframeMat
-    ;(wf.material as THREE.LineBasicMaterial).copy(mat)
+    const wfMat = obj.id === this.selectedId ? this.selectedWireframeMat : this.wireframeMat
+    ;(wf.material as THREE.LineBasicMaterial).copy(wfMat)
     mesh.add(wf)
     this.wireframeMap.set(obj.id, wf)
 
