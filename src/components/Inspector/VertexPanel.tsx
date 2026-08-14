@@ -50,13 +50,14 @@ export function VertexPanel({ objectId, vertexIndex }: VertexPanelProps) {
   const obj = objects.find(o => o.id === objectId)
   if (!obj) return null
 
-  const { positions, normals, uvs, colors } = obj.meshData
+  const { positions, normals, uvs, tangents, colors } = obj.meshData
   const i = vertexIndex
 
   const pos = [positions[i * 3], positions[i * 3 + 1], positions[i * 3 + 2]]
   const nor = normals ? [normals[i * 3], normals[i * 3 + 1], normals[i * 3 + 2]] : null
   const uv  = uvs     ? [uvs[i * 2], uvs[i * 2 + 1]] : null
-  const col = colors  ? [colors[i * 4], colors[i * 4 + 1], colors[i * 4 + 2], colors[i * 4 + 3]] : null
+  const tan = tangents ? [tangents[i * 4], tangents[i * 4 + 1], tangents[i * 4 + 2], tangents[i * 4 + 3]] : null
+  const col = colors   ? [colors[i * 4], colors[i * 4 + 1], colors[i * 4 + 2], colors[i * 4 + 3]] : null
 
   const handlePosChange = (axis: number, value: number) => {
     const next: [number, number, number] = [pos[0], pos[1], pos[2]]
@@ -112,6 +113,25 @@ export function VertexPanel({ objectId, vertexIndex }: VertexPanelProps) {
               decimals={4}
               readOnly
             />
+          </div>
+        )}
+
+        {tan && (
+          <div className={styles.vec3Block}>
+            <div className={styles.vec3Label}>Tangent</div>
+            <AxisRow
+              labels={['X', 'Y', 'Z']}
+              values={tan}
+              step={0.001}
+              decimals={4}
+              readOnly
+            />
+            <div className={styles.statGrid} style={{ marginTop: 4 }}>
+              <div className={styles.statRow}>
+                <span className={styles.statKey}>Handedness (W)</span>
+                <span className={styles.statVal}>{tan[3] >= 0 ? '+1' : '−1'}</span>
+              </div>
+            </div>
           </div>
         )}
 

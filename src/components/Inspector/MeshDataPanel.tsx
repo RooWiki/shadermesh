@@ -15,6 +15,8 @@ interface Props {
 
 export function MeshDataPanel({ obj }: Props) {
   const recalculateNormals = useSceneStore(s => s.recalculateNormals)
+  const computeTangents = useSceneStore(s => s.computeTangents)
+  const clearTangents = useSceneStore(s => s.clearTangents)
   const initVertexColors = useSceneStore(s => s.initVertexColors)
   const clearVertexColors = useSceneStore(s => s.clearVertexColors)
   const stats = getMeshStats(obj.meshData)
@@ -74,6 +76,27 @@ export function MeshDataPanel({ obj }: Props) {
         >
           Smooth
         </button>
+      </div>
+
+      <div className={styles.sectionSubtitle}>Tangents</div>
+      <div className={styles.actionRow}>
+        <button
+          className={styles.actionBtn}
+          onClick={() => computeTangents(obj.id)}
+          title="Calculate tangent space from UVs and normals (requires both)"
+          disabled={!stats.hasNormals || !stats.hasUVs}
+        >
+          Calculate
+        </button>
+        {stats.hasTangents && (
+          <button
+            className={styles.actionBtn}
+            onClick={() => clearTangents(obj.id)}
+            title="Remove tangent data"
+          >
+            Clear
+          </button>
+        )}
       </div>
 
       <div className={styles.sectionSubtitle}>Vertex Colors</div>

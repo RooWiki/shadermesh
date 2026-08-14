@@ -21,6 +21,8 @@ export function Toolbar() {
   const toggleGrid = useSceneStore(s => s.toggleGrid)
   const showNormals = useSceneStore(s => s.showNormals)
   const toggleNormals = useSceneStore(s => s.toggleNormals)
+  const showTangents = useSceneStore(s => s.showTangents)
+  const toggleTangents = useSceneStore(s => s.toggleTangents)
   const showVertexColors = useSceneStore(s => s.showVertexColors)
   const toggleVertexColors = useSceneStore(s => s.toggleVertexColors)
   const [showAddModal, setShowAddModal] = useState(false)
@@ -52,6 +54,14 @@ export function Toolbar() {
           title="Toggle normal vectors"
         >
           ↑ Normals
+        </button>
+
+        <button
+          className={`${styles.wfBtn} ${showTangents ? styles.wfBtnActive : ''}`}
+          onClick={toggleTangents}
+          title="Toggle tangent vectors"
+        >
+          → Tangents
         </button>
 
         <button

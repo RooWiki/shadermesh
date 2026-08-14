@@ -5,6 +5,7 @@ import { createMeshObject } from '../core/MeshObject'
 import { createPlane, createCube, createSphere } from '../geometry/primitives'
 import { recalculateFlatNormals, recalculateSmoothNormals } from '../geometry/normals'
 import { flipFace } from '../geometry/faces'
+import { calculateTangents } from '../geometry/tangents'
 
 export type EditorMode = 'object' | 'vertex' | 'face'
 export type WireframeMode = 'tri' | 'quad'
@@ -23,6 +24,7 @@ interface SceneState {
   wireframeMode: WireframeMode
   gridVisible: boolean
   showNormals: boolean
+  showTangents: boolean
   showVertexColors: boolean
   hoveredObjectId: string | null
 
@@ -50,6 +52,10 @@ interface SceneState {
   selectFace: (index: number | null) => void
   flipFaceNormal: (objectId: string, faceIndex: number) => void
 
+  // Tangents
+  computeTangents: (objectId: string) => void
+  clearTangents: (objectId: string) => void
+
   // Vertex colors
   initVertexColors: (objectId: string, random?: boolean) => void
   clearVertexColors: (objectId: string) => void
@@ -60,6 +66,7 @@ interface SceneState {
   setWireframeMode: (mode: WireframeMode) => void
   toggleGrid: () => void
   toggleNormals: () => void
+  toggleTangents: () => void
   toggleVertexColors: () => void
 
   // Utility
@@ -77,6 +84,7 @@ export const useSceneStore = create<SceneState>()(
     wireframeMode: 'tri',
     gridVisible: true,
     showNormals: false,
+    showTangents: false,
     showVertexColors: false,
     hoveredObjectId: null,
 
@@ -243,8 +251,25 @@ export const useSceneStore = create<SceneState>()(
 
     setEditorMode: (mode) => set({ editorMode: mode, selectedVertexIndex: null, selectedFaceIndex: null }),
     setWireframeMode: (mode) => set({ wireframeMode: mode }),
+    computeTangents: (objectId) => {
+      set(s => ({
+        objects: s.objects.map(o =>
+          o.id !== objectId ? o : { ...o, meshData: calculateTangents(o.meshData) }
+        ),
+      }))
+    },
+
+    clearTangents: (objectId) => {
+      set(s => ({
+        objects: s.objects.map(o =>
+          o.id !== objectId ? o : { ...o, meshData: { ...o.meshData, tangents: undefined } }
+        ),
+      }))
+    },
+
     toggleGrid: () => set(s => ({ gridVisible: !s.gridVisible })),
     toggleNormals: () => set(s => ({ showNormals: !s.showNormals })),
+    toggleTangents: () => set(s => ({ showTangents: !s.showTangents })),
     toggleVertexColors: () => set(s => ({ showVertexColors: !s.showVertexColors })),
 
     getObject: (id) => get().objects.find(o => o.id === id),

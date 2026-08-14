@@ -43,6 +43,11 @@ export class SceneManager {
   // Normal overlay
   private normalLines: THREE.LineSegments | null = null
   private showNormals = false
+
+  // Tangent overlay
+  private tangentLines: THREE.LineSegments | null = null
+  private showTangents = false
+
   private readonly normalScale = 0.15
 
   private animFrameId = 0
@@ -318,6 +323,16 @@ export class SceneManager {
     }
   }
 
+  setShowTangents(show: boolean) {
+    this.showTangents = show
+    if (show && this.selectedId) {
+      const obj = this.currentObjects.find(o => o.id === this.selectedId)
+      if (obj) this.buildTangentOverlay(obj.meshData)
+    } else {
+      this.clearTangentOverlay()
+    }
+  }
+
   frameSelected() {
     if (!this.selectedId) return
     const mesh = this.meshMap.get(this.selectedId)
@@ -383,6 +398,7 @@ export class SceneManager {
         this.buildFaceHighlight(obj.meshData, this.selectedFaceIndex)
       }
       if (this.showNormals) this.buildNormalOverlay(obj.meshData)
+      if (this.showTangents) this.buildTangentOverlay(obj.meshData)
     }
 
     this.meshDataRefMap.set(obj.id, obj.meshData)
@@ -418,6 +434,7 @@ export class SceneManager {
     this.clearVertexOverlay()
     this.clearFaceHighlight()
     this.clearNormalOverlay()
+    this.clearTangentOverlay()
 
     if (id) {
       const mesh = this.meshMap.get(id)
@@ -432,6 +449,7 @@ export class SceneManager {
       if (obj) {
         if (this.currentMode === 'vertex') this.buildVertexOverlay(obj.meshData)
         if (this.showNormals) this.buildNormalOverlay(obj.meshData)
+        if (this.showTangents) this.buildTangentOverlay(obj.meshData)
       }
     }
   }
@@ -525,6 +543,43 @@ export class SceneManager {
     this.normalLines.geometry.dispose()
     ;(this.normalLines.material as THREE.LineBasicMaterial).dispose()
     this.normalLines = null
+  }
+
+  // ── Tangent overlay ──────────────────────────────────────────
+
+  private buildTangentOverlay(meshData: MeshData) {
+    this.clearTangentOverlay()
+    const mesh = this.meshMap.get(this.selectedId!)
+    if (!mesh || !meshData.tangents) return
+
+    const { positions, tangents } = meshData
+    const count = positions.length / 3
+    const pts = new Float32Array(count * 6)
+
+    for (let i = 0; i < count; i++) {
+      pts[i*6+0] = positions[i*3+0]
+      pts[i*6+1] = positions[i*3+1]
+      pts[i*6+2] = positions[i*3+2]
+      pts[i*6+3] = positions[i*3+0] + tangents[i*4+0] * this.normalScale
+      pts[i*6+4] = positions[i*3+1] + tangents[i*4+1] * this.normalScale
+      pts[i*6+5] = positions[i*3+2] + tangents[i*4+2] * this.normalScale
+    }
+
+    const geo = new THREE.BufferGeometry()
+    geo.setAttribute('position', new THREE.BufferAttribute(pts, 3))
+    this.tangentLines = new THREE.LineSegments(
+      geo,
+      new THREE.LineBasicMaterial({ color: 0xffcc00, transparent: true, opacity: 0.75, depthTest: false }),
+    )
+    mesh.add(this.tangentLines)
+  }
+
+  private clearTangentOverlay() {
+    if (!this.tangentLines) return
+    this.tangentLines.parent?.remove(this.tangentLines)
+    this.tangentLines.geometry.dispose()
+    ;(this.tangentLines.material as THREE.LineBasicMaterial).dispose()
+    this.tangentLines = null
   }
 
   // ── Vertex overlay ───────────────────────────────────────────
@@ -659,6 +714,7 @@ export class SceneManager {
     this.clearVertexOverlay()
     this.clearFaceHighlight()
     this.clearNormalOverlay()
+    this.clearTangentOverlay()
     for (const [id] of this.meshMap) this.removeMeshFromScene(id)
     this.orbitControls.dispose()
     this.renderer.dispose()

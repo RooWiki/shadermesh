@@ -18,6 +18,7 @@ export function Viewport() {
   const wireframeMode = useSceneStore(s => s.wireframeMode)
   const gridVisible = useSceneStore(s => s.gridVisible)
   const showNormals = useSceneStore(s => s.showNormals)
+  const showTangents = useSceneStore(s => s.showTangents)
   const showVertexColors = useSceneStore(s => s.showVertexColors)
 
   useEffect(() => {
@@ -63,6 +64,10 @@ export function Viewport() {
   useEffect(() => {
     sceneManagerRef.current?.setShowNormals(showNormals)
   }, [showNormals])
+
+  useEffect(() => {
+    sceneManagerRef.current?.setShowTangents(showTangents)
+  }, [showTangents])
 
   useEffect(() => {
     sceneManagerRef.current?.setShowVertexColors(showVertexColors)
