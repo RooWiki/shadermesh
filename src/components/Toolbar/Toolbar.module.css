@@ -9,11 +9,21 @@
 }
 
 .brand {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-size: 13px;
   font-weight: 800;
   letter-spacing: 0.06em;
   color: #5c7cfa;
   white-space: nowrap;
+}
+
+.logo {
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  object-fit: cover;
 }
 
 .divider {

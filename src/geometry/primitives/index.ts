@@ -1,3 +1,5 @@
+export { createShape2D, getShape2DDisplayName } from './create2DShapes'
+export type { Shape2DType, Shape2DParams } from './create2DShapes'
 export { createPlane } from './createPlane'
 export { createCube } from './createCube'
 export { createSphere } from './createSphere'

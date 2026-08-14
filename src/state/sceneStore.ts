@@ -2,8 +2,8 @@ import { create } from 'zustand'
 import { subscribeWithSelector } from 'zustand/middleware'
 import type { MeshObject, Transform } from '../core/MeshObject'
 import { createMeshObject } from '../core/MeshObject'
-import { createPlane, createCube, createSphere, createCylinder, createCone, createTorus, createCapsule } from '../geometry/primitives'
-import type { CylinderParams, ConeParams, TorusParams, CapsuleParams } from '../geometry/primitives'
+import { createPlane, createCube, createSphere, createCylinder, createCone, createTorus, createCapsule, createShape2D } from '../geometry/primitives'
+import type { CylinderParams, ConeParams, TorusParams, CapsuleParams, Shape2DType, Shape2DParams } from '../geometry/primitives'
 import { recalculateFlatNormals, recalculateSmoothNormals } from '../geometry/normals'
 import { flipFace } from '../geometry/faces'
 import { calculateTangents } from '../geometry/tangents'
@@ -63,6 +63,7 @@ interface SceneState {
   addCone: (params?: ConeParams) => string
   addTorus: (params?: TorusParams) => string
   addCapsule: (params?: CapsuleParams) => string
+  addShape2D: (type: Shape2DType, params?: Shape2DParams) => string
   importObject: (meshData: import('../core/MeshData').MeshData, name: string) => string
   removeObject: (id: string) => void
   renameObject: (id: string, name: string) => void
@@ -232,6 +233,17 @@ export const useSceneStore = create<SceneState>()(
       const id = nextId()
       const name = `Capsule.${String(objectCounter).padStart(3, '0')}`
       const meshData = createCapsule(params)
+      const obj = createMeshObject(id, name, meshData)
+      set(s => ({ objects: [...s.objects, obj], selectedObjectId: id }))
+      return id
+    },
+
+    addShape2D: (type, params = {}) => {
+      get().pushHistory()
+      const id = nextId()
+      const label = type.charAt(0).toUpperCase() + type.slice(1)
+      const name = `${label}.${String(objectCounter).padStart(3, '0')}`
+      const meshData = createShape2D(type, params)
       const obj = createMeshObject(id, name, meshData)
       set(s => ({ objects: [...s.objects, obj], selectedObjectId: id }))
       return id

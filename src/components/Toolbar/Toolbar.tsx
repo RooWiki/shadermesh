@@ -60,7 +60,10 @@ export function Toolbar() {
   return (
     <>
       <div className={styles.toolbar}>
-        <div className={styles.brand}>ShaderMesh</div>
+        <div className={styles.brand}>
+          <img src="/logo.png" alt="ShaderMesh" className={styles.logo} />
+          ShaderMesh
+        </div>
 
         <div className={styles.divider} />
 

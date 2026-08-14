@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useSceneStore } from '../../state/sceneStore'
-import { SceneManager } from '../../viewport/SceneManager'
+import { SceneManager, type ViewportId } from '../../viewport/SceneManager'
 import styles from './Viewport.module.css'
 
 export function Viewport() {
@@ -24,8 +24,14 @@ export function Viewport() {
   const showTangents = useSceneStore(s => s.showTangents)
   const showVertexColors = useSceneStore(s => s.showVertexColors)
 
-  // Box-select overlay state (client-space rect)
   const [dragBox, setDragBox] = useState<{ x: number; y: number; w: number; h: number } | null>(null)
+  const [maximizedPanel, setMaximizedPanel] = useState<ViewportId | null>(null)
+
+  const handleLabelDblClick = (vp: ViewportId) => {
+    const next = maximizedPanel === vp ? null : vp
+    setMaximizedPanel(next)
+    sceneManagerRef.current?.setMaximizedPanel(next)
+  }
 
   useEffect(() => {
     if (!containerRef.current) return
@@ -98,20 +104,34 @@ export function Viewport() {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
-  // Right-click box-select in vertex mode
-  // Use capture phase so we intercept before OrbitControls (bubble phase)
+  // Right-click box-select in vertex/face mode — panel-aware NDC
   useEffect(() => {
     const el = containerRef.current
     if (!el) return
 
+    type PanelId = 'top' | 'persp' | 'front' | 'right'
     let start: { x: number; y: number } | null = null
+    let startPanel: PanelId = 'persp'
     let moved = false
     let currentBox: { x: number; y: number; w: number; h: number } | null = null
+
+    const getPanelFromPointer = (cx: number, cy: number, rect: DOMRect): PanelId => {
+      const rx = cx - rect.left
+      const ry = cy - rect.top
+      const left = rx < rect.width / 2
+      const top  = ry < rect.height / 2
+      if (top  && left)  return 'top'
+      if (top  && !left) return 'persp'
+      if (!top && left)  return 'front'
+      return 'right'
+    }
 
     const onDown = (e: PointerEvent) => {
       if (e.button !== 2 || (editorMode !== 'vertex' && editorMode !== 'face')) return
       e.preventDefault()
       e.stopPropagation()
+      const rect = el.getBoundingClientRect()
+      startPanel = getPanelFromPointer(e.clientX, e.clientY, rect)
       start = { x: e.clientX, y: e.clientY }
       moved = false
       currentBox = null
@@ -142,12 +162,19 @@ export function Viewport() {
       if (!moved) return
 
       const rect = el.getBoundingClientRect()
+      // NDC within the panel that started the drag
+      const panelLeft = (startPanel === 'persp' || startPanel === 'right') ? rect.left + rect.width / 2 : rect.left
+      const panelTop  = (startPanel === 'front' || startPanel === 'right') ? rect.top + rect.height / 2 : rect.top
+      const panelW = rect.width / 2
+      const panelH = rect.height / 2
+
       const toNDC = (cx: number, cy: number) => ({
-        x: ((cx - rect.left) / rect.width) * 2 - 1,
-        y: -((cy - rect.top) / rect.height) * 2 + 1,
+        x: ((cx - panelLeft) / panelW) * 2 - 1,
+        y: -((cy - panelTop) / panelH) * 2 + 1,
       })
       const p1 = toNDC(s.x, s.y)
       const p2 = toNDC(e.clientX, e.clientY)
+
       if (editorMode === 'vertex') {
         const indices = sceneManagerRef.current?.getVerticesInBox(p1.x, p1.y, p2.x, p2.y) ?? []
         selectVertices(indices)
@@ -181,6 +208,32 @@ export function Viewport() {
   return (
     <div className={styles.viewportWrapper}>
       <div ref={containerRef} className={styles.canvas} />
+
+      {/* Quad divider cross — hidden when a panel is maximized */}
+      {!maximizedPanel && <div className={styles.quadDivider} />}
+
+      {/* Panel labels — double-click to maximize / restore */}
+      {(!maximizedPanel || maximizedPanel === 'top') && (
+        <span className={`${styles.panelLabel} ${styles.labelTop}`} onDoubleClick={() => handleLabelDblClick('top')}>
+          Top{maximizedPanel === 'top' ? ' ×' : ''}
+        </span>
+      )}
+      {(!maximizedPanel || maximizedPanel === 'persp') && (
+        <span className={`${styles.panelLabel} ${styles.labelPersp}`} onDoubleClick={() => handleLabelDblClick('persp')}>
+          Persp{maximizedPanel === 'persp' ? ' ×' : ''}
+        </span>
+      )}
+      {(!maximizedPanel || maximizedPanel === 'front') && (
+        <span className={`${styles.panelLabel} ${styles.labelFront}`} onDoubleClick={() => handleLabelDblClick('front')}>
+          Front{maximizedPanel === 'front' ? ' ×' : ''}
+        </span>
+      )}
+      {(!maximizedPanel || maximizedPanel === 'right') && (
+        <span className={`${styles.panelLabel} ${styles.labelRight}`} onDoubleClick={() => handleLabelDblClick('right')}>
+          Right{maximizedPanel === 'right' ? ' ×' : ''}
+        </span>
+      )}
+
       <div className={styles.modeIndicator}>{modeLabel} &nbsp;·&nbsp; {toolLabel}</div>
       <div className={styles.shortcuts}>
         <span>F: Frame &nbsp; Q/W/E/R: Tools</span>

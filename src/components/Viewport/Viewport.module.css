@@ -17,9 +17,60 @@
   height: 100% !important;
 }
 
+/* Cross divider between the four panels */
+.quadDivider {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+.quadDivider::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+  background: #2a2a38;
+}
+.quadDivider::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1px;
+  background: #2a2a38;
+}
+
+/* Panel name labels */
+.panelLabel {
+  position: absolute;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: #4a4a60;
+  pointer-events: auto;
+  cursor: pointer;
+  user-select: none;
+  z-index: 2;
+  padding: 2px 4px;
+  border-radius: 3px;
+  transition: color 0.15s;
+}
+.panelLabel:hover {
+  color: #8888aa;
+}
+
+.labelTop   { top: 6px;              left: 8px; }
+.labelPersp { top: 6px;              left: calc(50% + 8px); }
+.labelFront { top: calc(50% + 6px);  left: 8px; }
+.labelRight { top: calc(50% + 6px);  left: calc(50% + 8px); }
+
+/* Mode / tool indicator — bottom-left of top-left panel */
 .modeIndicator {
   position: absolute;
-  top: 10px;
+  bottom: calc(50% + 10px);
   left: 12px;
   font-size: 11px;
   font-weight: 700;
@@ -30,6 +81,7 @@
   border-radius: 3px;
   border: 1px solid rgba(240, 160, 80, 0.3);
   pointer-events: none;
+  z-index: 2;
 }
 
 .shortcuts {
@@ -39,6 +91,7 @@
   display: flex;
   gap: 12px;
   pointer-events: none;
+  z-index: 2;
 }
 
 .shortcuts span {

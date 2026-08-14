@@ -13,14 +13,31 @@ type PushHistoryCallback = () => void
 type TransformChangeCallback = (id: string, position: [number,number,number], rotation: [number,number,number], scale: [number,number,number]) => void
 type NotifyMeshChangedCallback = (id: string) => void
 
+export type ViewportId = 'persp' | 'top' | 'front' | 'right'
+
 const VERTEX_COLOR_DEFAULT = [0.35, 0.55, 0.95] as const
 const VERTEX_COLOR_SELECTED = [1.0, 0.85, 0.1] as const
+const ORTHO_SIZE = 5  // frustum half-height at zoom=1
 
 export class SceneManager {
   private scene: THREE.Scene
   private renderer: THREE.WebGLRenderer
-  private camera: THREE.PerspectiveCamera
-  private orbitControls: OrbitControls
+
+  // Four cameras
+  private perspCamera: THREE.PerspectiveCamera
+  private topCamera: THREE.OrthographicCamera
+  private frontCamera: THREE.OrthographicCamera
+  private rightCamera: THREE.OrthographicCamera
+
+  // Four controls (all on same domElement, enabled/disabled based on active panel)
+  private perspControls: OrbitControls
+  private topControls: OrbitControls
+  private frontControls: OrbitControls
+  private rightControls: OrbitControls
+
+  private activeViewport: ViewportId = 'persp'
+  private maximizedPanel: ViewportId | null = null
+
   private gridHelper: THREE.GridHelper
 
   private meshMap = new Map<string, THREE.Mesh>()
@@ -97,7 +114,6 @@ export class SceneManager {
     const { clientWidth: w, clientHeight: h } = container
 
     this.scene = new THREE.Scene()
-    this.scene.background = new THREE.Color(0x1e1e24)
 
     this.renderer = new THREE.WebGLRenderer({ antialias: true })
     this.renderer.setPixelRatio(window.devicePixelRatio)
@@ -106,9 +122,34 @@ export class SceneManager {
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap
     container.appendChild(this.renderer.domElement)
 
-    this.camera = new THREE.PerspectiveCamera(60, w / h, 0.01, 10000)
-    this.camera.position.set(3, 2.5, 4)
-    this.camera.lookAt(0, 0, 0)
+    const aspect = (w / 2) / (h / 2)
+
+    // Perspective camera — top-right panel
+    this.perspCamera = new THREE.PerspectiveCamera(60, aspect, 0.01, 10000)
+    this.perspCamera.position.set(3, 2.5, 4)
+    this.perspCamera.lookAt(0, 0, 0)
+
+    // Top orthographic camera — top-left panel (looks down -Y)
+    this.topCamera = new THREE.OrthographicCamera(
+      -ORTHO_SIZE * aspect, ORTHO_SIZE * aspect, ORTHO_SIZE, -ORTHO_SIZE, 0.01, 10000,
+    )
+    this.topCamera.position.set(0, 100, 0)
+    this.topCamera.up.set(0, 0, -1)
+    this.topCamera.lookAt(0, 0, 0)
+
+    // Front orthographic camera — bottom-left panel (looks along -Z)
+    this.frontCamera = new THREE.OrthographicCamera(
+      -ORTHO_SIZE * aspect, ORTHO_SIZE * aspect, ORTHO_SIZE, -ORTHO_SIZE, 0.01, 10000,
+    )
+    this.frontCamera.position.set(0, 0, 100)
+    this.frontCamera.lookAt(0, 0, 0)
+
+    // Right orthographic camera — bottom-right panel (looks along -X)
+    this.rightCamera = new THREE.OrthographicCamera(
+      -ORTHO_SIZE * aspect, ORTHO_SIZE * aspect, ORTHO_SIZE, -ORTHO_SIZE, 0.01, 10000,
+    )
+    this.rightCamera.position.set(100, 0, 0)
+    this.rightCamera.lookAt(0, 0, 0)
 
     const ambient = new THREE.AmbientLight(0xffffff, 0.6)
     this.scene.add(ambient)
@@ -138,29 +179,68 @@ export class SceneManager {
       depthTest: false,
     })
 
-    this.orbitControls = new OrbitControls(this.camera, this.renderer.domElement)
-    this.orbitControls.enableDamping = true
-    this.orbitControls.dampingFactor = 0.1
-    this.orbitControls.screenSpacePanning = true
-    this.orbitControls.minDistance = 0.1
-    this.orbitControls.maxDistance = 500
+    // Proxy so that OrbitControls and TransformControls see the active panel's
+    // bounding rect / clientWidth / clientHeight instead of the full canvas.
+    // All event listeners still land on the real canvas via bind(target).
+    const sm = this
+    const panelEl = new Proxy(this.renderer.domElement, {
+      get(target, prop, receiver) {
+        if (prop === 'getBoundingClientRect') {
+          return () => {
+            const r = target.getBoundingClientRect()
+            if (sm.maximizedPanel) return r  // full canvas when maximized
+            const hw = r.width / 2, hh = r.height / 2
+            const isRight  = sm.activeViewport === 'persp' || sm.activeViewport === 'right'
+            const isBottom = sm.activeViewport === 'front' || sm.activeViewport === 'right'
+            const l = r.left + (isRight  ? hw : 0)
+            const t = r.top  + (isBottom ? hh : 0)
+            return { left: l, top: t, width: hw, height: hh, right: l+hw, bottom: t+hh, x: l, y: t, toJSON: () => ({}) } as DOMRect
+          }
+        }
+        if (prop === 'clientWidth')  return sm.maximizedPanel ? target.clientWidth  : Math.floor(target.clientWidth  / 2)
+        if (prop === 'clientHeight') return sm.maximizedPanel ? target.clientHeight : Math.floor(target.clientHeight / 2)
+        const v = Reflect.get(target, prop, target)  // target as receiver avoids native DOM accessor errors
+        return typeof v === 'function' ? (v as (...a: unknown[]) => unknown).bind(target) : v
+      },
+    })
 
-    this.transformControls = new TransformControls(this.camera, this.renderer.domElement)
+    // Perspective controls — full orbit
+    this.perspControls = new OrbitControls(this.perspCamera, panelEl as unknown as HTMLElement)
+    this.perspControls.enableDamping = true
+    this.perspControls.dampingFactor = 0.1
+    this.perspControls.screenSpacePanning = true
+    this.perspControls.minDistance = 0.1
+    this.perspControls.maxDistance = 500
+
+    // Ortho controls — pan + zoom only, no rotation
+    const makeOrthoControls = (camera: THREE.OrthographicCamera) => {
+      const ctrl = new OrbitControls(camera, panelEl as unknown as HTMLElement)
+      ctrl.enableRotate = false
+      ctrl.screenSpacePanning = true
+      ctrl.mouseButtons = { LEFT: THREE.MOUSE.PAN, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: null as any }
+      ctrl.enabled = false
+      ctrl.update()
+      return ctrl
+    }
+    this.topControls = makeOrthoControls(this.topCamera)
+    this.frontControls = makeOrthoControls(this.frontCamera)
+    this.rightControls = makeOrthoControls(this.rightCamera)
+
+    this.transformControls = new TransformControls(this.perspCamera, panelEl as unknown as HTMLElement)
     this.transformControls.setSize(0.85)
     this.scene.add(this.transformControls.getHelper())
 
     // Pause orbit while dragging gizmo
     this.transformControls.addEventListener('dragging-changed', (e: any) => {
-      this.orbitControls.enabled = !e.value
+      this.getActiveControls().enabled = !e.value
     })
 
-    // Push history on first actual movement (lazy — no spurious undo entry if gizmo not moved)
+    // Push history on first actual movement
     let historyPushedThisDrag = false
     this.transformControls.addEventListener('mouseDown', () => {
       historyPushedThisDrag = false
       this.gizmoDragActive = true
       if (this.currentMode !== 'object' && this.selectionPivot) {
-        // Snapshot pivot base matrix and selected vertex positions for delta computation
         this.selectionPivot.updateWorldMatrix(true, false)
         this.pivotBaseMatrix.copy(this.selectionPivot.matrixWorld)
         this.snapshotBaseVertexPositions()
@@ -177,12 +257,10 @@ export class SceneManager {
     })
     this.transformControls.addEventListener('mouseUp', () => {
       if (this.currentMode !== 'object') {
-        // Sync modified vertex positions to store and reset pivot to new centroid
         this.syncVerticesToStore()
         this.baseVertexPositions = null
         this.updateSelectionPivot()
       } else {
-        // Object mode: sync final object transform to store
         const attached = this.transformControls.object
         if (attached && this.selectedId) {
           const p = attached.position
@@ -196,11 +274,13 @@ export class SceneManager {
           )
         }
       }
-      // Reset flag after current event loop so onPointerUp can still read it
       setTimeout(() => { this.gizmoDragActive = false }, 0)
     })
 
-    this.renderer.domElement.addEventListener('pointerdown', this.onPointerDown)
+    // Hover activates viewport — no click needed
+    this.renderer.domElement.addEventListener('pointermove', this.onPointerHover)
+    // Capture phase so we update TC camera before TransformControls sees the event
+    this.renderer.domElement.addEventListener('pointerdown', this.onPointerDown, true)
 
     this.resizeObserver = new ResizeObserver(this.onResize)
     this.resizeObserver.observe(container)
@@ -213,15 +293,74 @@ export class SceneManager {
   private onResize = () => {
     const { clientWidth: w, clientHeight: h } = this.container
     if (w === 0 || h === 0) return
-    this.camera.aspect = w / h
-    this.camera.updateProjectionMatrix()
+    const hw = Math.floor(w / 2), hh = Math.floor(h / 2)
+    const aspect = hw / hh
+
+    this.perspCamera.aspect = aspect
+    this.perspCamera.updateProjectionMatrix()
+
+    for (const cam of [this.topCamera, this.frontCamera, this.rightCamera]) {
+      cam.left  = -ORTHO_SIZE * aspect
+      cam.right =  ORTHO_SIZE * aspect
+      // top/bottom stay at ±ORTHO_SIZE; zoom handles effective scale
+      cam.updateProjectionMatrix()
+    }
+
     this.renderer.setSize(w, h)
   }
 
   private pointerMoved = false
   private pointerDownPos = { x: 0, y: 0 }
 
+  private getViewportFromPointer(clientX: number, clientY: number): ViewportId {
+    if (this.maximizedPanel) return this.maximizedPanel
+    const rect = this.renderer.domElement.getBoundingClientRect()
+    const x = clientX - rect.left
+    const y = clientY - rect.top
+    const left = x < rect.width / 2
+    const top  = y < rect.height / 2
+    if (top  && left)  return 'top'
+    if (top  && !left) return 'persp'
+    if (!top && left)  return 'front'
+    return 'right'
+  }
+
+  private getActiveCamera(): THREE.Camera {
+    switch (this.activeViewport) {
+      case 'persp': return this.perspCamera
+      case 'top':   return this.topCamera
+      case 'front': return this.frontCamera
+      case 'right': return this.rightCamera
+    }
+  }
+
+  private getActiveControls(): OrbitControls {
+    switch (this.activeViewport) {
+      case 'persp': return this.perspControls
+      case 'top':   return this.topControls
+      case 'front': return this.frontControls
+      case 'right': return this.rightControls
+    }
+  }
+
+  // Updates active viewport and enables the right controls on hover (no click needed).
+  // Skipped while any button is held so mid-drag moves don't switch panels.
+  private onPointerHover = (e: PointerEvent) => {
+    if (e.buttons !== 0) return
+    const vp = this.getViewportFromPointer(e.clientX, e.clientY)
+    if (vp === this.activeViewport) return
+    this.activeViewport = vp
+    this.perspControls.enabled  = vp === 'persp'
+    this.topControls.enabled    = vp === 'top'
+    this.frontControls.enabled  = vp === 'front'
+    this.rightControls.enabled  = vp === 'right'
+    this.transformControls.camera = this.getActiveCamera()
+  }
+
   private onPointerDown = (e: PointerEvent) => {
+    // Viewport is already active from hover; just sync TC camera in case of edge cases
+    this.transformControls.camera = this.getActiveCamera()
+
     if (e.button !== 0) return
     this.pointerMoved = false
     this.pointerDownPos = { x: e.clientX, y: e.clientY }
@@ -250,17 +389,30 @@ export class SceneManager {
     }
   }
 
+  // NDC computed within the active panel (each panel maps to [-1,1]x[-1,1])
   private getNDC(e: PointerEvent): THREE.Vector2 {
     const rect = this.renderer.domElement.getBoundingClientRect()
+    const x = e.clientX - rect.left
+    const y = e.clientY - rect.top
+    if (this.maximizedPanel) {
+      return new THREE.Vector2(
+        (x / rect.width) * 2 - 1,
+        -(y / rect.height) * 2 + 1,
+      )
+    }
+    const hw = rect.width / 2
+    const hh = rect.height / 2
+    const panelLeft = (this.activeViewport === 'persp' || this.activeViewport === 'right') ? hw : 0
+    const panelTop  = (this.activeViewport === 'front' || this.activeViewport === 'right') ? hh : 0
     return new THREE.Vector2(
-      ((e.clientX - rect.left) / rect.width) * 2 - 1,
-      -((e.clientY - rect.top) / rect.height) * 2 + 1,
+      ((x - panelLeft) / hw) * 2 - 1,
+      -((y - panelTop) / hh) * 2 + 1,
     )
   }
 
   private pickObject(e: PointerEvent) {
     const raycaster = new THREE.Raycaster()
-    raycaster.setFromCamera(this.getNDC(e), this.camera)
+    raycaster.setFromCamera(this.getNDC(e), this.getActiveCamera())
     const meshes = Array.from(this.meshMap.values())
     const hits = raycaster.intersectObjects(meshes, false)
     if (hits.length > 0) {
@@ -274,7 +426,7 @@ export class SceneManager {
     if (this.vertexPoints && this.selectedId) {
       const raycaster = new THREE.Raycaster()
       raycaster.params.Points = { threshold: 0.08 }
-      raycaster.setFromCamera(this.getNDC(e), this.camera)
+      raycaster.setFromCamera(this.getNDC(e), this.getActiveCamera())
       const hits = raycaster.intersectObject(this.vertexPoints, false)
       if (hits.length > 0) {
         const idx = hits[0].index!
@@ -287,7 +439,6 @@ export class SceneManager {
         }
         return
       }
-      // Miss: shift keeps selection, plain click deselects
       if (!e.shiftKey) this.onSelectVertices([])
       return
     }
@@ -299,7 +450,7 @@ export class SceneManager {
       const mesh = this.meshMap.get(this.selectedId)
       if (mesh) {
         const raycaster = new THREE.Raycaster()
-        raycaster.setFromCamera(this.getNDC(e), this.camera)
+        raycaster.setFromCamera(this.getNDC(e), this.getActiveCamera())
         const hits = raycaster.intersectObject(mesh, false)
         if (hits.length > 0 && hits[0].faceIndex !== undefined) {
           const idx = hits[0].faceIndex
@@ -328,6 +479,18 @@ export class SceneManager {
 
   // ── Public API ────────────────────────────────────────────────
 
+  setMaximizedPanel(vp: ViewportId | null) {
+    this.maximizedPanel = vp
+    if (vp) {
+      this.activeViewport = vp
+      this.perspControls.enabled  = vp === 'persp'
+      this.topControls.enabled    = vp === 'top'
+      this.frontControls.enabled  = vp === 'front'
+      this.rightControls.enabled  = vp === 'right'
+      this.transformControls.camera = this.getActiveCamera()
+    }
+  }
+
   syncObjects(objects: MeshObject[], selectedId: string | null) {
     this.currentObjects = objects
     const incoming = new Set(objects.map(o => o.id))
@@ -341,7 +504,6 @@ export class SceneManager {
         this.addMeshToScene(obj)
       } else {
         this.updateMeshGeometryIfChanged(obj)
-        // Don't overwrite TC-controlled transform mid-drag — would snap mesh to old store position
         if (!(this.gizmoDragActive && this.currentMode === 'object' && obj.id === this.selectedId)) {
           this.updateMeshTransform(obj)
         }
@@ -360,8 +522,8 @@ export class SceneManager {
 
   setEditorMode(mode: EditorMode) {
     this.currentMode = mode
-    // In vertex/face mode disable right-click orbit pan so box-select can use it
-    ;(this.orbitControls.mouseButtons as any).RIGHT = (mode === 'vertex' || mode === 'face') ? null : THREE.MOUSE.PAN
+    // Disable right-click pan in vertex/face mode (right-click = box select)
+    ;(this.perspControls.mouseButtons as any).RIGHT = (mode === 'vertex' || mode === 'face') ? null : THREE.MOUSE.PAN
     this.updateGizmoAttachment()
     if (mode === 'vertex' && this.selectedId) {
       const obj = this.currentObjects.find(o => o.id === this.selectedId)
@@ -378,7 +540,6 @@ export class SceneManager {
     const modeMap = { translate: 'translate', rotate: 'rotate', scale: 'scale' } as const
 
     if (this.currentMode === 'object') {
-      // Clean up any sub-object pivot
       if (this.selectionPivot) {
         this.scene.remove(this.selectionPivot)
         this.selectionPivot = null
@@ -391,7 +552,6 @@ export class SceneManager {
         this.transformControls.detach()
       }
     } else {
-      // Vertex / face mode — use selection pivot
       this.updateSelectionPivot()
     }
   }
@@ -421,11 +581,12 @@ export class SceneManager {
     const maxY = Math.max(ndcY1, ndcY2)
 
     const v = new THREE.Vector3()
+    const camera = this.getActiveCamera()
     for (let i = 0; i < count; i++) {
       v.set(positions[i*3], positions[i*3+1], positions[i*3+2])
       v.applyMatrix4(mesh.matrixWorld)
-      v.project(this.camera)
-      if (v.z > 1) continue  // behind camera
+      v.project(camera)
+      if (v.z > 1) continue
       if (v.x >= minX && v.x <= maxX && v.y >= minY && v.y <= maxY) result.push(i)
     }
     return result
@@ -459,6 +620,7 @@ export class SceneManager {
     const minY = Math.min(ndcY1, ndcY2), maxY = Math.max(ndcY1, ndcY2)
 
     const v = new THREE.Vector3()
+    const camera = this.getActiveCamera()
     for (let t = 0; t < triCount; t++) {
       const a = indices[t*3], b = indices[t*3+1], c = indices[t*3+2]
       v.set(
@@ -467,7 +629,7 @@ export class SceneManager {
         (positions[a*3+2] + positions[b*3+2] + positions[c*3+2]) / 3,
       )
       v.applyMatrix4(mesh.matrixWorld)
-      v.project(this.camera)
+      v.project(camera)
       if (v.z > 1) continue
       if (v.x >= minX && v.x <= maxX && v.y >= minY && v.y <= maxY) result.push(t)
     }
@@ -528,12 +690,22 @@ export class SceneManager {
     const center = box.getCenter(new THREE.Vector3())
     const size = box.getSize(new THREE.Vector3())
     const radius = Math.max(size.x, size.y, size.z) * 1.5
-    this.orbitControls.target.copy(center)
-    this.camera.position.copy(center).addScaledVector(
-      this.camera.position.clone().sub(center).normalize(),
-      Math.max(radius, 0.5),
-    )
-    this.orbitControls.update()
+    const ctrl = this.getActiveControls()
+    ctrl.target.copy(center)
+
+    if (this.activeViewport === 'persp') {
+      this.perspCamera.position.copy(center).addScaledVector(
+        this.perspCamera.position.clone().sub(center).normalize(),
+        Math.max(radius, 0.5),
+      )
+      ctrl.update()
+    } else {
+      const cam = this.getActiveCamera() as THREE.OrthographicCamera
+      const frustumH = cam.top - cam.bottom  // base frustum height (before zoom)
+      cam.zoom = frustumH / Math.max(radius * 2.5, 0.1)
+      cam.updateProjectionMatrix()
+      ctrl.update()
+    }
   }
 
   // ── Private scene management ─────────────────────────────────
@@ -564,7 +736,6 @@ export class SceneManager {
     mesh.geometry.dispose()
     mesh.geometry = meshDataToBufferGeometry(obj.meshData)
 
-    // Reapply material in case colors were added or removed
     const mat = this.meshMatMap.get(obj.id)
     if (mat) mesh.material = (this.showVertexColors && obj.meshData.colors) ? this.vcMat : mat
 
@@ -736,12 +907,10 @@ export class SceneManager {
     const vertexIndices = this.getSelectionVertexIndicesForMode()
     if (vertexIndices.length === 0) return
 
-    // Delta in world space: mDelta = mCurrent * inverse(mBase)
     this.selectionPivot.updateWorldMatrix(true, false)
     const mDelta = this.selectionPivot.matrixWorld.clone().multiply(
       this.pivotBaseMatrix.clone().invert()
     )
-    // Transform in local mesh space: v_new = mWorldInv * mDelta * mWorld * v_base
     mesh.updateWorldMatrix(true, false)
     const mTransform = mesh.matrixWorld.clone().invert().multiply(mDelta).multiply(mesh.matrixWorld)
 
@@ -753,7 +922,6 @@ export class SceneManager {
       positions[vi*3] = v.x; positions[vi*3+1] = v.y; positions[vi*3+2] = v.z
     })
 
-    // Flag GPU upload (buffer is shared with geometry since MeshRenderer doesn't copy)
     ;(mesh.geometry.attributes.position as THREE.BufferAttribute).needsUpdate = true
 
     this.refreshOverlaysDuringDrag(obj.meshData)
@@ -777,7 +945,6 @@ export class SceneManager {
     const obj = this.currentObjects.find(o => o.id === this.selectedId)
     const mesh = this.meshMap.get(this.selectedId)
     if (obj && mesh && obj.meshData.normals) {
-      // Recompute normals in geometry and copy back to meshData
       mesh.geometry.computeVertexNormals()
       const normalAttr = mesh.geometry.attributes.normal as THREE.BufferAttribute
       obj.meshData.normals!.set(normalAttr.array as Float32Array)
@@ -915,7 +1082,6 @@ export class SceneManager {
     })
 
     this.vertexPoints = new THREE.Points(geo, mat)
-    // Add as child of mesh so it inherits object transform automatically
     mesh.add(this.vertexPoints)
   }
 
@@ -942,14 +1108,49 @@ export class SceneManager {
     colors.needsUpdate = true
   }
 
-  // ── Animation & gizmo ────────────────────────────────────────
+  // ── Render loop ───────────────────────────────────────────────
 
   private animate = () => {
     this.animFrameId = requestAnimationFrame(this.animate)
-    this.orbitControls.update()
-    this.renderer.render(this.scene, this.camera)
+
+    this.perspControls.update()
+    this.topControls.update()
+    this.frontControls.update()
+    this.rightControls.update()
+
+    const w = this.container.clientWidth
+    const h = this.container.clientHeight
+    const hw = Math.floor(w / 2)
+    const hh = Math.floor(h / 2)
+
+    this.renderer.setScissorTest(true)
+
+    if (this.maximizedPanel) {
+      this.renderPanel(this.getActiveCamera(), 0, 0, w, h)
+    } else {
+      // GL coords: (x, y) = bottom-left of panel
+      // Screen layout:        GL layout (y flipped):
+      //  TL=top    TR=persp    TL → GL(0, hh)    TR → GL(hw, hh)
+      //  BL=front  BR=right    BL → GL(0, 0)     BR → GL(hw, 0)
+      this.renderPanel(this.topCamera,   0,  hh, hw, hh)  // top-left
+      this.renderPanel(this.perspCamera, hw, hh, hw, hh)  // top-right
+      this.renderPanel(this.frontCamera, 0,  0,  hw, hh)  // bottom-left
+      this.renderPanel(this.rightCamera, hw, 0,  hw, hh)  // bottom-right
+    }
+
+    this.renderer.setScissorTest(false)
     this.renderGizmo()
   }
+
+  private renderPanel(camera: THREE.Camera, glX: number, glY: number, w: number, h: number) {
+    this.renderer.setViewport(glX, glY, w, h)
+    this.renderer.setScissor(glX, glY, w, h)
+    this.renderer.setClearColor(0x1e1e24, 1)
+    this.renderer.clear(true, true, false)
+    this.renderer.render(this.scene, camera)
+  }
+
+  // ── Orientation gizmo (perspective panel corner) ─────────────
 
   private gizmoScene = new THREE.Scene()
   private gizmoCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 10)
@@ -958,11 +1159,11 @@ export class SceneManager {
   private initGizmo() {
     this.gizmoCamera.position.set(0, 0, 5)
     const axes = [
-      { dir: new THREE.Vector3(1, 0, 0), color: 0xff4444, neg: false },
+      { dir: new THREE.Vector3(1, 0, 0),  color: 0xff4444, neg: false },
       { dir: new THREE.Vector3(-1, 0, 0), color: 0x883333, neg: true },
-      { dir: new THREE.Vector3(0, 1, 0), color: 0x44ff66, neg: false },
+      { dir: new THREE.Vector3(0, 1, 0),  color: 0x44ff66, neg: false },
       { dir: new THREE.Vector3(0, -1, 0), color: 0x336644, neg: true },
-      { dir: new THREE.Vector3(0, 0, 1), color: 0x4488ff, neg: false },
+      { dir: new THREE.Vector3(0, 0, 1),  color: 0x4488ff, neg: false },
       { dir: new THREE.Vector3(0, 0, -1), color: 0x334488, neg: true },
     ]
     for (const ax of axes) {
@@ -985,13 +1186,18 @@ export class SceneManager {
 
   private renderGizmo() {
     if (!this.gizmoInitialized) this.initGizmo()
-    const { clientWidth: w, clientHeight: h } = this.container
+
+    // Always render gizmo in the perspective panel (top-right), top-right corner
+    const w = this.container.clientWidth
+    const h = this.container.clientHeight
     const size = 90
+    // Perspective panel in GL: x=hw, y=hh, w=hw, h=hh
+    // Gizmo top-right corner of that panel: glX = w-size-12, glY = h-size-12
     const gx = w - size - 12
-    const gy = 12
+    const gy = h - size - 12
 
     const dir = new THREE.Vector3()
-    this.camera.getWorldDirection(dir)
+    this.perspCamera.getWorldDirection(dir)
     this.gizmoCamera.position.copy(dir.negate().multiplyScalar(5))
     this.gizmoCamera.lookAt(0, 0, 0)
 
@@ -1013,7 +1219,8 @@ export class SceneManager {
   dispose() {
     cancelAnimationFrame(this.animFrameId)
     this.resizeObserver.disconnect()
-    this.renderer.domElement.removeEventListener('pointerdown', this.onPointerDown)
+    this.renderer.domElement.removeEventListener('pointermove', this.onPointerHover)
+    this.renderer.domElement.removeEventListener('pointerdown', this.onPointerDown, true)
     this.clearVertexOverlay()
     this.clearFaceHighlight()
     this.clearNormalOverlay()
@@ -1022,7 +1229,10 @@ export class SceneManager {
     for (const [id] of this.meshMap) this.removeMeshFromScene(id)
     this.transformControls.detach()
     this.transformControls.dispose()
-    this.orbitControls.dispose()
+    this.perspControls.dispose()
+    this.topControls.dispose()
+    this.frontControls.dispose()
+    this.rightControls.dispose()
     this.renderer.dispose()
     this.container.removeChild(this.renderer.domElement)
   }
