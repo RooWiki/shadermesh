@@ -20,7 +20,7 @@ function useGlobalShortcuts() {
   const redo = useSceneStore(s => s.redo)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.ctrlKey && e.key === 'z') {
+      if (e.ctrlKey && e.code === 'KeyZ') {
         if (e.target instanceof HTMLInputElement) return
         e.preventDefault()
         if (e.shiftKey) redo(); else undo()

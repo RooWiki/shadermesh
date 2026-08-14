@@ -32,8 +32,8 @@ export function Viewport() {
     const sm = new SceneManager(
       containerRef.current,
       (id) => selectObject(id),
-      (index) => selectVertex(index),
-      (index) => selectFace(index),
+      (indices) => selectVertices(indices),
+      (indices) => selectFaces(indices),
       () => { useSceneStore.getState().pushHistory() },
       (id, pos, rot, scale) => { useSceneStore.getState().setTransformSilent(id, pos, rot, scale) },
       (id) => { useSceneStore.getState().notifyMeshChanged(id) },

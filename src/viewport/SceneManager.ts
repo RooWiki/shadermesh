@@ -7,8 +7,8 @@ import type { ActiveTool, EditorMode, WireframeMode } from '../state/sceneStore'
 import { meshDataToBufferGeometry } from './MeshRenderer'
 
 type SelectCallback = (id: string | null) => void
-type SelectVertexCallback = (index: number | null) => void
-type SelectFaceCallback = (index: number | null) => void
+type SelectVerticesCallback = (indices: number[]) => void
+type SelectFacesCallback = (indices: number[]) => void
 type PushHistoryCallback = () => void
 type TransformChangeCallback = (id: string, position: [number,number,number], rotation: [number,number,number], scale: [number,number,number]) => void
 type NotifyMeshChangedCallback = (id: string) => void
@@ -39,8 +39,8 @@ export class SceneManager {
 
   private selectedId: string | null = null
   private onSelect: SelectCallback
-  private onSelectVertex: SelectVertexCallback
-  private onSelectFace: SelectFaceCallback
+  private onSelectVertices: SelectVerticesCallback
+  private onSelectFaces: SelectFacesCallback
   private onPushHistory: PushHistoryCallback
   private onTransformChange: TransformChangeCallback
   private onNotifyMeshChanged: NotifyMeshChangedCallback
@@ -80,16 +80,16 @@ export class SceneManager {
   constructor(
     container: HTMLDivElement,
     onSelect: SelectCallback,
-    onSelectVertex: SelectVertexCallback,
-    onSelectFace: SelectFaceCallback,
+    onSelectVertices: SelectVerticesCallback,
+    onSelectFaces: SelectFacesCallback,
     onPushHistory: PushHistoryCallback,
     onTransformChange: TransformChangeCallback,
     onNotifyMeshChanged: NotifyMeshChangedCallback,
   ) {
     this.container = container
     this.onSelect = onSelect
-    this.onSelectVertex = onSelectVertex
-    this.onSelectFace = onSelectFace
+    this.onSelectVertices = onSelectVertices
+    this.onSelectFaces = onSelectFaces
     this.onPushHistory = onPushHistory
     this.onTransformChange = onTransformChange
     this.onNotifyMeshChanged = onNotifyMeshChanged
@@ -225,7 +225,7 @@ export class SceneManager {
     if (e.button !== 0) return
     this.pointerMoved = false
     this.pointerDownPos = { x: e.clientX, y: e.clientY }
-    this.renderer.domElement.addEventListener('pointermove', this.onPointerMove, { once: true })
+    this.renderer.domElement.addEventListener('pointermove', this.onPointerMove)
     this.renderer.domElement.addEventListener('pointerup', this.onPointerUp, { once: true })
   }
 
@@ -236,8 +236,10 @@ export class SceneManager {
   }
 
   private onPointerUp = (e: PointerEvent) => {
+    this.renderer.domElement.removeEventListener('pointermove', this.onPointerMove)
     if (this.pointerMoved) return
     if (e.button !== 0) return
+    if (e.altKey) return
     if (this.gizmoDragActive) return
     if (this.currentMode === 'vertex') {
       this.pickVertex(e)
@@ -269,22 +271,26 @@ export class SceneManager {
   }
 
   private pickVertex(e: PointerEvent) {
-    // In vertex mode: try vertex pick on selected object first.
-    // If miss (or no object selected), fall back to object pick.
     if (this.vertexPoints && this.selectedId) {
       const raycaster = new THREE.Raycaster()
       raycaster.params.Points = { threshold: 0.08 }
       raycaster.setFromCamera(this.getNDC(e), this.camera)
       const hits = raycaster.intersectObject(this.vertexPoints, false)
       if (hits.length > 0) {
-        this.onSelectVertex(hits[0].index ?? null)
+        const idx = hits[0].index!
+        if (e.shiftKey) {
+          const cur = this.selectedVertexIndices
+          const next = cur.includes(idx) ? cur.filter(i => i !== idx) : [...cur, idx]
+          this.onSelectVertices(next)
+        } else {
+          this.onSelectVertices([idx])
+        }
         return
       }
-      // Click in empty space: deselect vertex only (keep object selected)
-      this.onSelectVertex(null)
+      // Miss: shift keeps selection, plain click deselects
+      if (!e.shiftKey) this.onSelectVertices([])
       return
     }
-    // No selected object: pick a mesh to select it
     this.pickObject(e)
   }
 
@@ -296,10 +302,17 @@ export class SceneManager {
         raycaster.setFromCamera(this.getNDC(e), this.camera)
         const hits = raycaster.intersectObject(mesh, false)
         if (hits.length > 0 && hits[0].faceIndex !== undefined) {
-          this.onSelectFace(hits[0].faceIndex)
+          const idx = hits[0].faceIndex
+          if (e.shiftKey) {
+            const cur = this.selectedFaceIndices
+            const next = cur.includes(idx) ? cur.filter(i => i !== idx) : [...cur, idx]
+            this.onSelectFaces(next)
+          } else {
+            this.onSelectFaces([idx])
+          }
           return
         }
-        this.onSelectFace(null)
+        if (!e.shiftKey) this.onSelectFaces([])
         return
       }
     }
