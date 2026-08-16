@@ -1,7 +1,12 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useSceneStore } from '../../state/sceneStore'
 import { NumberInput } from '../Inspector/NumberInput'
+import {
+  createPlane, createCube, createSphere, createCylinder,
+  createCone, createTorus, createCapsule, createShape2D,
+} from '../../geometry/primitives'
 import type { Shape2DType } from '../../geometry/primitives'
+import { PrimitivePreview } from './PrimitivePreview'
 import styles from './AddObjectModal.module.css'
 
 type PrimitiveType = 'plane' | 'cube' | 'sphere' | 'cylinder' | 'cone' | 'torus' | 'capsule'
@@ -88,13 +93,16 @@ export function AddObjectModal({ onClose }: AddObjectModalProps) {
   const [cylH, setCylH] = useState(1)
   const [cylRS, setCylRS] = useState(16)
   const [cylHS, setCylHS] = useState(1)
+  const [cylRise, setCylRise] = useState(0)
   const [coneR, setConeR] = useState(0.5)
   const [coneH, setConeH] = useState(1)
   const [coneRS, setConeRS] = useState(16)
+  const [coneRise, setConeRise] = useState(0)
   const [torR, setTorR] = useState(0.5)
   const [torT, setTorT] = useState(0.2)
   const [torRS, setTorRS] = useState(12)
   const [torTS, setTorTS] = useState(32)
+  const [torRise, setTorRise] = useState(0)
   const [capR, setCapR] = useState(0.4)
   const [capH, setCapH] = useState(1)
   const [capRS, setCapRS] = useState(16)
@@ -115,6 +123,8 @@ export function AddObjectModal({ onClose }: AddObjectModalProps) {
   const [outerRadius, setOuterRadius] = useState(0.5)
   const [startAngle, setStartAngle] = useState(0)
   const [endAngle, setEndAngle] = useState(270)
+  const [arcRise, setArcRise] = useState(0)
+  const [ringRise, setRingRise] = useState(0)
   // crescent
   const [cresOuterR, setCresOuterR] = useState(0.5)
   const [cresInnerR, setCresInnerR] = useState(0.42)
@@ -124,11 +134,16 @@ export function AddObjectModal({ onClose }: AddObjectModalProps) {
   const [spiralOuter, setSpiralOuter] = useState(0.5)
   const [spiralTurns, setSpiralTurns] = useState(3)
   const [spiralWidth, setSpiralWidth] = useState(0.04)
+  const [spiralRise, setSpiralRise] = useState(0)
   // triangle variants
   const [triBase, setTriBase] = useState(1)
   const [triHeight, setTriHeight] = useState(1)
   const [triSide, setTriSide] = useState(1)
   const [scaleOffset, setScaleOffset] = useState(0.3)
+  const [isoBase, setIsoBase] = useState(1.2)
+  const [isoHeight, setIsoHeight] = useState(0.8)
+  const [eloBase, setEloBase] = useState(0.2)
+  const [eloHeight, setEloHeight] = useState(2)
   // quads
   const [rectW, setRectW] = useState(1)
   const [rectH, setRectH] = useState(0.5)
@@ -172,14 +187,17 @@ export function AddObjectModal({ onClose }: AddObjectModalProps) {
   const [zzSegs, setZzSegs] = useState(4)
   const [zzT, setZzT] = useState(0.06)
 
-  const addPlane    = useSceneStore(s => s.addPlane)
-  const addCube     = useSceneStore(s => s.addCube)
-  const addSphere   = useSceneStore(s => s.addSphere)
-  const addCylinder = useSceneStore(s => s.addCylinder)
-  const addCone     = useSceneStore(s => s.addCone)
-  const addTorus    = useSceneStore(s => s.addTorus)
-  const addCapsule  = useSceneStore(s => s.addCapsule)
-  const addShape2D  = useSceneStore(s => s.addShape2D)
+  const [objectName, setObjectName] = useState('')
+
+  const addPlane      = useSceneStore(s => s.addPlane)
+  const addCube       = useSceneStore(s => s.addCube)
+  const addSphere     = useSceneStore(s => s.addSphere)
+  const addCylinder   = useSceneStore(s => s.addCylinder)
+  const addCone       = useSceneStore(s => s.addCone)
+  const addTorus      = useSceneStore(s => s.addTorus)
+  const addCapsule    = useSceneStore(s => s.addCapsule)
+  const addShape2D    = useSceneStore(s => s.addShape2D)
+  const renameObject  = useSceneStore(s => s.renameObject)
 
   const get2DParams = (): Record<string, number> => {
     switch (shape2D) {
@@ -187,18 +205,18 @@ export function AddObjectModal({ onClose }: AddObjectModalProps) {
       case 'ellipse':     return { radiusX, radiusZ, segments }
       case 'oval':        return { width: ovalW, height: ovalH, segments }
       case 'semicircle':  return { radius, segments }
-      case 'arc':         return { innerRadius, outerRadius, startAngle, endAngle, segments }
-      case 'ring':        return { innerRadius, outerRadius, segments }
+      case 'arc':         return { innerRadius, outerRadius, startAngle, endAngle, segments, rise: arcRise }
+      case 'ring':        return { innerRadius, outerRadius, segments, rise: ringRise }
       case 'sector':      return { radius, startAngle, endAngle, segments }
       case 'segment':     return { radius, startAngle, endAngle: endAngle, segments }
-      case 'crown':       return { innerRadius, outerRadius, segments }
+      case 'crown':       return { innerRadius, outerRadius, segments, rise: ringRise }
       case 'crescent':    return { outerRadius: cresOuterR, innerRadius: cresInnerR, offset: cresOffset, segments }
-      case 'spiral':      return { innerRadius: spiralInner, outerRadius: spiralOuter, turns: spiralTurns, width: spiralWidth, segments }
+      case 'spiral':      return { innerRadius: spiralInner, outerRadius: spiralOuter, turns: spiralTurns, width: spiralWidth, segments, rise: spiralRise }
       case 'triangle':    return { base: triBase, height: triHeight }
       case 'equilateral': return { side: triSide }
-      case 'isosceles':   return { base: triBase, height: triHeight }
+      case 'isosceles':   return { base: isoBase, height: isoHeight }
       case 'scalene':     return { base: triBase, height: triHeight, offset: scaleOffset }
-      case 'elongated':   return { base: triBase, height: triHeight }
+      case 'elongated':   return { base: eloBase, height: eloHeight }
       case 'rectangle':   return { width: rectW, height: rectH }
       case 'square':      return { size: squareSize }
       case 'rhombus':     return { diagonalH: rhDiagH, diagonalV: rhDiagV }
@@ -222,18 +240,103 @@ export function AddObjectModal({ onClose }: AddObjectModalProps) {
     }
   }
 
-  const handleAdd = () => {
-    if (tab === '3d') {
-      if      (type === 'plane')    addPlane({ width: planeW, height: planeH, subdivisionsX: planeSX, subdivisionsY: planeSY })
-      else if (type === 'cube')     addCube({ width: cubeW, height: cubeH, depth: cubeD })
-      else if (type === 'sphere')   addSphere({ radius: sphereR, widthSegments: sphereWS, heightSegments: sphereHS })
-      else if (type === 'cylinder') addCylinder({ radiusTop: cylRT, radiusBottom: cylRB, height: cylH, radialSegments: cylRS, heightSegments: cylHS })
-      else if (type === 'cone')     addCone({ radius: coneR, height: coneH, radialSegments: coneRS })
-      else if (type === 'torus')    addTorus({ radius: torR, tube: torT, radialSegments: torRS, tubularSegments: torTS })
-      else                          addCapsule({ radius: capR, height: capH, radialSegments: capRS, hemisphereSegments: capHS })
-    } else {
-      addShape2D(shape2D, get2DParams())
+  const previewMeshData = useMemo(() => {
+    try {
+      if (tab === '2d') {
+        const p2 = (() => {
+          switch (shape2D) {
+            case 'circle':      return { radius, segments }
+            case 'ellipse':     return { radiusX, radiusZ, segments }
+            case 'oval':        return { width: ovalW, height: ovalH, segments }
+            case 'semicircle':  return { radius, segments }
+            case 'arc':         return { innerRadius, outerRadius, startAngle, endAngle, segments, rise: arcRise }
+            case 'ring':        return { innerRadius, outerRadius, segments, rise: ringRise }
+            case 'sector':      return { radius, startAngle, endAngle, segments }
+            case 'segment':     return { radius, startAngle, endAngle, segments }
+            case 'crown':       return { innerRadius, outerRadius, segments, rise: ringRise }
+            case 'crescent':    return { outerRadius: cresOuterR, innerRadius: cresInnerR, offset: cresOffset, segments }
+            case 'spiral':      return { innerRadius: spiralInner, outerRadius: spiralOuter, turns: spiralTurns, width: spiralWidth, segments, rise: spiralRise }
+            case 'triangle':    return { base: triBase, height: triHeight }
+            case 'isosceles':   return { base: isoBase, height: isoHeight }
+            case 'elongated':   return { base: eloBase, height: eloHeight }
+            case 'equilateral': return { side: triSide }
+            case 'scalene':     return { base: triBase, height: triHeight, offset: scaleOffset }
+            case 'rectangle':   return { width: rectW, height: rectH }
+            case 'rhomboid':
+            case 'parallelogram': return { width: rectW, height: rectH, skew }
+            case 'square':      return { size: squareSize }
+            case 'rhombus':     return { diagonalH: rhDiagH, diagonalV: rhDiagV }
+            case 'trapezoid':   return { topWidth: trapTop, bottomWidth: trapBot, height: trapH }
+            case 'kite':        return { width: kiteW, topHeight: kiteTop, bottomHeight: kiteBot }
+            case 'pentagon':
+            case 'hexagon':
+            case 'heptagon':
+            case 'octagon':     return { radius: polyRadius }
+            case 'irregular':   return { radius: polyRadius, sides: polySides, irregularity }
+            case 'star':        return { outerRadius: starOuter, innerRadius: starInner, points: starPoints }
+            case 'arrow':       return { length: arrowLen, headWidth: arrowHW, headLength: arrowHL, shaftWidth: arrowSW }
+            case 'wedge':       return { width: wedgeW, depth: wedgeD, thickness: wedgeT }
+            case 'ribbon':      return { width: ribW, height: ribH, thickness: ribT }
+            case 'straight':    return { length: lineLen, width: lineW }
+            case 'curved':      return { length: lineLen, curvature, width: lineW }
+            case 'broken':      return { length1: brokenL1, length2: brokenL2, angle: brokenAngle, width: lineW }
+            case 'zigzag':      return { width: zzW, height: zzH, zigzags: zzSegs, thickness: zzT }
+          }
+        })()
+        return createShape2D(shape2D, p2)
+      }
+      switch (type) {
+        case 'plane':    return createPlane({ width: planeW, height: planeH, subdivisionsX: planeSX, subdivisionsY: planeSY })
+        case 'cube':     return createCube({ width: cubeW, height: cubeH, depth: cubeD })
+        case 'sphere':   return createSphere({ radius: sphereR, widthSegments: sphereWS, heightSegments: sphereHS })
+        case 'cylinder': return createCylinder({ radiusTop: cylRT, radiusBottom: cylRB, height: cylH, radialSegments: cylRS, heightSegments: cylHS, rise: cylRise })
+        case 'cone':     return createCone({ radius: coneR, height: coneH, radialSegments: coneRS, rise: coneRise })
+        case 'torus':    return createTorus({ radius: torR, tube: torT, radialSegments: torRS, tubularSegments: torTS, rise: torRise })
+        case 'capsule':  return createCapsule({ radius: capR, height: capH, radialSegments: capRS, hemisphereSegments: capHS })
+      }
+    } catch {
+      return createCube({})
     }
+  }, [
+    tab, type, shape2D,
+    planeW, planeH, planeSX, planeSY,
+    cubeW, cubeH, cubeD,
+    sphereR, sphereWS, sphereHS,
+    cylRT, cylRB, cylH, cylRS, cylHS, cylRise,
+    coneR, coneH, coneRS, coneRise,
+    torR, torT, torRS, torTS, torRise,
+    capR, capH, capRS, capHS,
+    radius, radiusX, radiusZ, ovalW, ovalH, segments,
+    innerRadius, outerRadius, startAngle, endAngle, arcRise, ringRise,
+    cresOuterR, cresInnerR, cresOffset,
+    spiralInner, spiralOuter, spiralTurns, spiralWidth, spiralRise,
+    triBase, triHeight, triSide, scaleOffset, isoBase, isoHeight, eloBase, eloHeight,
+    rectW, rectH, squareSize, rhDiagH, rhDiagV, skew,
+    trapTop, trapBot, trapH, kiteW, kiteTop, kiteBot,
+    polyRadius, polySides, irregularity,
+    starOuter, starInner, starPoints,
+    arrowLen, arrowHW, arrowHL, arrowSW,
+    wedgeW, wedgeD, wedgeT,
+    ribW, ribH, ribT,
+    lineLen, lineW, curvature,
+    brokenL1, brokenL2, brokenAngle,
+    zzW, zzH, zzSegs, zzT,
+  ])
+
+  const handleAdd = () => {
+    let id: string
+    if (tab === '3d') {
+      if      (type === 'plane')    id = addPlane({ width: planeW, height: planeH, subdivisionsX: planeSX, subdivisionsY: planeSY })
+      else if (type === 'cube')     id = addCube({ width: cubeW, height: cubeH, depth: cubeD })
+      else if (type === 'sphere')   id = addSphere({ radius: sphereR, widthSegments: sphereWS, heightSegments: sphereHS })
+      else if (type === 'cylinder') id = addCylinder({ radiusTop: cylRT, radiusBottom: cylRB, height: cylH, radialSegments: cylRS, heightSegments: cylHS, rise: cylRise })
+      else if (type === 'cone')     id = addCone({ radius: coneR, height: coneH, radialSegments: coneRS, rise: coneRise })
+      else if (type === 'torus')    id = addTorus({ radius: torR, tube: torT, radialSegments: torRS, tubularSegments: torTS, rise: torRise })
+      else                          id = addCapsule({ radius: capR, height: capH, radialSegments: capRS, hemisphereSegments: capHS })
+    } else {
+      id = addShape2D(shape2D, get2DParams())
+    }
+    if (objectName.trim()) renameObject(id!, objectName.trim())
     onClose()
   }
 
@@ -264,6 +367,10 @@ export function AddObjectModal({ onClose }: AddObjectModalProps) {
     cylinder: 'Cylinder', cone: 'Cone', torus: 'Torus', capsule: 'Capsule',
   }
 
+  const namePlaceholder = tab === '2d'
+    ? shape2D.charAt(0).toUpperCase() + shape2D.slice(1)
+    : LABELS[type]
+
   return (
     <div className={styles.overlay} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
       <div className={styles.modal}>
@@ -275,159 +382,168 @@ export function AddObjectModal({ onClose }: AddObjectModalProps) {
           <button className={`${styles.tabBtn} ${tab === '2d' ? styles.tabBtnActive : ''}`} onClick={() => setTab('2d')}>2D Shapes</button>
         </div>
 
-        {tab === '3d' && (
-          <>
-            <div className={styles.typeRow}>
-              {TYPES.map(t => (
-                <button
-                  key={t}
-                  className={`${styles.typeBtn} ${type === t ? styles.typeBtnActive : ''}`}
-                  onClick={() => setType(t)}
-                >
-                  {LABELS[t]}
-                </button>
-              ))}
-            </div>
+        {/* Two-column layout: preview left, controls right */}
+        <div className={styles.twoCol}>
+          <div className={styles.previewCol}>
+            {previewMeshData && <PrimitivePreview meshData={previewMeshData} height={260} />}
+          </div>
 
-            <div className={styles.fields}>
-              {type === 'plane' && (
-                <>
-                  {field('Width', planeW, setPlaneW)}
-                  {field('Height', planeH, setPlaneH)}
-                  {intField('Subdivisions X', planeSX, setPlaneSX)}
-                  {intField('Subdivisions Y', planeSY, setPlaneSY)}
-                  <div className={styles.hint}>{(planeSX + 1) * (planeSY + 1)} vertices · {planeSX * planeSY * 2} triangles</div>
-                </>
-              )}
-              {type === 'cube' && (
-                <>
-                  {field('Width', cubeW, setCubeW)}
-                  {field('Height', cubeH, setCubeH)}
-                  {field('Depth', cubeD, setCubeD)}
-                  <div className={styles.hint}>24 vertices · 12 triangles</div>
-                </>
-              )}
-              {type === 'sphere' && (
-                <>
-                  {field('Radius', sphereR, setSphereR)}
-                  {intField('Width Segments', sphereWS, setSphereWS, 3)}
-                  {intField('Height Segments', sphereHS, setSphereHS, 2)}
-                  <div className={styles.hint}>{(sphereWS + 1) * (sphereHS + 1)} vertices</div>
-                </>
-              )}
-              {type === 'cylinder' && (
-                <>
-                  {field('Radius Top', cylRT, setCylRT, 0.1, 3, 0)}
-                  {field('Radius Bottom', cylRB, setCylRB, 0.1, 3, 0.001)}
-                  {field('Height', cylH, setCylH)}
-                  {intField('Radial Segments', cylRS, setCylRS, 3)}
-                  {intField('Height Segments', cylHS, setCylHS)}
-                </>
-              )}
-              {type === 'cone' && (
-                <>
-                  {field('Radius', coneR, setConeR)}
-                  {field('Height', coneH, setConeH)}
-                  {intField('Radial Segments', coneRS, setConeRS, 3)}
-                </>
-              )}
-              {type === 'torus' && (
-                <>
-                  {field('Radius', torR, setTorR)}
-                  {field('Tube', torT, setTorT)}
-                  {intField('Radial Segments', torRS, setTorRS, 3)}
-                  {intField('Tubular Segments', torTS, setTorTS, 3)}
-                  <div className={styles.hint}>{(torRS + 1) * (torTS + 1)} vertices · {torRS * torTS * 2} triangles</div>
-                </>
-              )}
-              {type === 'capsule' && (
-                <>
-                  {field('Radius', capR, setCapR)}
-                  {field('Height', capH, setCapH, 0.1, 3, 0)}
-                  {intField('Radial Segments', capRS, setCapRS, 3)}
-                  {intField('Hemisphere Segs', capHS, setCapHS)}
-                </>
-              )}
-            </div>
-          </>
-        )}
+          <div className={styles.controlCol}>
+            {tab === '3d' && (
+              <>
+                <div className={styles.typeRow}>
+                  {TYPES.map(t => (
+                    <button
+                      key={t}
+                      className={`${styles.typeBtn} ${type === t ? styles.typeBtnActive : ''}`}
+                      onClick={() => setType(t)}
+                    >
+                      {LABELS[t]}
+                    </button>
+                  ))}
+                </div>
 
-        {tab === '2d' && (
-          <>
-            {/* Category filter */}
-            <div className={styles.catRow}>
-              {CATEGORIES.map(cat => (
-                <button
-                  key={cat}
-                  className={`${styles.catBtn} ${category === cat ? styles.catBtnActive : ''}`}
-                  onClick={() => setCategory(cat)}
-                >
-                  {CATEGORY_LABELS[cat]}
-                </button>
-              ))}
-            </div>
+                <div className={styles.fields}>
+                  {type === 'plane' && (
+                    <>
+                      {field('Width', planeW, setPlaneW)}
+                      {field('Height', planeH, setPlaneH)}
+                      {intField('Subdivisions X', planeSX, setPlaneSX)}
+                      {intField('Subdivisions Y', planeSY, setPlaneSY)}
+                      <div className={styles.hint}>{(planeSX + 1) * (planeSY + 1)} verts · {planeSX * planeSY * 2} tris</div>
+                    </>
+                  )}
+                  {type === 'cube' && (
+                    <>
+                      {field('Width', cubeW, setCubeW)}
+                      {field('Height', cubeH, setCubeH)}
+                      {field('Depth', cubeD, setCubeD)}
+                      <div className={styles.hint}>24 verts · 12 tris</div>
+                    </>
+                  )}
+                  {type === 'sphere' && (
+                    <>
+                      {field('Radius', sphereR, setSphereR)}
+                      {intField('Width Segments', sphereWS, setSphereWS, 3)}
+                      {intField('Height Segments', sphereHS, setSphereHS, 2)}
+                      <div className={styles.hint}>{(sphereWS + 1) * (sphereHS + 1)} verts</div>
+                    </>
+                  )}
+                  {type === 'cylinder' && (
+                    <>
+                      {field('Radius Top', cylRT, setCylRT, 0.1, 3, 0)}
+                      {field('Radius Bottom', cylRB, setCylRB, 0.1, 3, 0.001)}
+                      {field('Height', cylH, setCylH)}
+                      {intField('Radial Segments', cylRS, setCylRS, 3)}
+                      {intField('Height Segments', cylHS, setCylHS)}
+                      {field('Rise / Rev', cylRise, setCylRise, 0.1, 3, -Infinity)}
+                    </>
+                  )}
+                  {type === 'cone' && (
+                    <>
+                      {field('Radius', coneR, setConeR)}
+                      {field('Height', coneH, setConeH)}
+                      {intField('Radial Segments', coneRS, setConeRS, 3)}
+                      {field('Rise / Rev', coneRise, setConeRise, 0.1, 3, -Infinity)}
+                    </>
+                  )}
+                  {type === 'torus' && (
+                    <>
+                      {field('Radius', torR, setTorR)}
+                      {field('Tube', torT, setTorT)}
+                      {intField('Radial Segments', torRS, setTorRS, 3)}
+                      {intField('Tubular Segments', torTS, setTorTS, 3)}
+                      {field('Rise / Rev', torRise, setTorRise, 0.1, 3, -Infinity)}
+                      <div className={styles.hint}>{(torRS + 1) * (torTS + 1)} verts · {torRS * torTS * 2} tris</div>
+                    </>
+                  )}
+                  {type === 'capsule' && (
+                    <>
+                      {field('Radius', capR, setCapR)}
+                      {field('Height', capH, setCapH, 0.1, 3, 0)}
+                      {intField('Radial Segments', capRS, setCapRS, 3)}
+                      {intField('Hemisphere Segs', capHS, setCapHS)}
+                    </>
+                  )}
+                </div>
+              </>
+            )}
 
-            {/* Shape grid */}
-            <div className={styles.shapeGrid}>
-              {SHAPES_BY_CATEGORY[category].map(({ type: t, label }) => (
-                <button
-                  key={t}
-                  className={`${styles.shapeBtn} ${shape2D === t ? styles.shapeBtnActive : ''}`}
-                  onClick={() => setShape2D(t)}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
+            {tab === '2d' && (
+              <>
+                <div className={styles.catRow}>
+                  {CATEGORIES.map(cat => (
+                    <button
+                      key={cat}
+                      className={`${styles.catBtn} ${category === cat ? styles.catBtnActive : ''}`}
+                      onClick={() => setCategory(cat)}
+                    >
+                      {CATEGORY_LABELS[cat]}
+                    </button>
+                  ))}
+                </div>
 
-            {/* Params for selected 2D shape */}
-            <div className={styles.fields}>
-              {/* circle */}
-              {shape2D === 'circle' && (<>{field('Radius', radius, setRadius)}{intField('Segments', segments, setSegments, 3)}</>)}
-              {/* ellipse */}
-              {shape2D === 'ellipse' && (<>{field('Radius X', radiusX, setRadiusX)}{field('Radius Z', radiusZ, setRadiusZ)}{intField('Segments', segments, setSegments, 3)}</>)}
-              {/* oval */}
-              {shape2D === 'oval' && (<>{field('Width', ovalW, setOvalW)}{field('Height', ovalH, setOvalH)}{intField('Segments', segments, setSegments, 4)}</>)}
-              {/* semicircle */}
-              {shape2D === 'semicircle' && (<>{field('Radius', radius, setRadius)}{intField('Segments', segments, setSegments, 3)}</>)}
-              {/* arc */}
-              {shape2D === 'arc' && (<>{field('Inner Radius', innerRadius, setInnerRadius)}{field('Outer Radius', outerRadius, setOuterRadius)}{angleField('Start Angle°', startAngle, setStartAngle)}{angleField('End Angle°', endAngle, setEndAngle)}{intField('Segments', segments, setSegments, 2)}</>)}
-              {/* ring / crown */}
-              {(shape2D === 'ring' || shape2D === 'crown') && (<>{field('Inner Radius', innerRadius, setInnerRadius)}{field('Outer Radius', outerRadius, setOuterRadius)}{intField('Segments', segments, setSegments, 3)}</>)}
-              {/* sector */}
-              {shape2D === 'sector' && (<>{field('Radius', radius, setRadius)}{angleField('Start Angle°', startAngle, setStartAngle)}{angleField('End Angle°', endAngle, setEndAngle)}{intField('Segments', segments, setSegments, 2)}</>)}
-              {/* segment */}
-              {shape2D === 'segment' && (<>{field('Radius', radius, setRadius)}{angleField('Start Angle°', startAngle, setStartAngle)}{angleField('End Angle°', endAngle, setEndAngle)}{intField('Segments', segments, setSegments, 2)}</>)}
-              {/* crescent */}
-              {shape2D === 'crescent' && (<>{field('Outer Radius', cresOuterR, setCresOuterR)}{field('Inner Radius', cresInnerR, setCresInnerR)}{field('Offset', cresOffset, setCresOffset)}{intField('Segments', segments, setSegments, 8)}</>)}
-              {/* spiral */}
-              {shape2D === 'spiral' && (<>{field('Inner Radius', spiralInner, setSpiralInner)}{field('Outer Radius', spiralOuter, setSpiralOuter)}{field('Turns', spiralTurns, setSpiralTurns, 0.5, 1, 0.5)}{field('Width', spiralWidth, setSpiralWidth)}{intField('Segments', segments, setSegments, 4)}</>)}
-              {/* triangles */}
-              {(shape2D === 'triangle' || shape2D === 'isosceles' || shape2D === 'elongated') && (<>{field('Base', triBase, setTriBase)}{field('Height', triHeight, setTriHeight)}</>)}
-              {shape2D === 'equilateral' && (<>{field('Side', triSide, setTriSide)}</>)}
-              {shape2D === 'scalene' && (<>{field('Base', triBase, setTriBase)}{field('Height', triHeight, setTriHeight)}{field('Offset', scaleOffset, setScaleOffset, 0.1)}</>)}
-              {/* quads */}
-              {(shape2D === 'rectangle' || shape2D === 'rhomboid' || shape2D === 'parallelogram') && (<>{field('Width', rectW, setRectW)}{field('Height', rectH, setRectH)}{shape2D !== 'rectangle' && field('Skew', skew, setSkew, 0.1)}</>)}
-              {shape2D === 'square' && (<>{field('Size', squareSize, setSquareSize)}</>)}
-              {shape2D === 'rhombus' && (<>{field('Diagonal H', rhDiagH, setRhDiagH)}{field('Diagonal V', rhDiagV, setRhDiagV)}</>)}
-              {shape2D === 'trapezoid' && (<>{field('Top Width', trapTop, setTrapTop)}{field('Bottom Width', trapBot, setTrapBot)}{field('Height', trapH, setTrapH)}</>)}
-              {shape2D === 'kite' && (<>{field('Width', kiteW, setKiteW)}{field('Top Height', kiteTop, setKiteTop)}{field('Bottom Height', kiteBot, setKiteBot)}</>)}
-              {/* regular */}
-              {(shape2D === 'pentagon' || shape2D === 'hexagon' || shape2D === 'heptagon' || shape2D === 'octagon') && (<>{field('Radius', polyRadius, setPolyRadius)}</>)}
-              {shape2D === 'irregular' && (<>{field('Radius', polyRadius, setPolyRadius)}{intField('Sides', polySides, setPolySides, 3)}{field('Irregularity', irregularity, setIrregularity, 0.05, 2, 0)}</>)}
-              {/* decorative */}
-              {shape2D === 'star' && (<>{field('Outer Radius', starOuter, setStarOuter)}{field('Inner Radius', starInner, setStarInner)}{intField('Points', starPoints, setStarPoints, 3)}</>)}
-              {shape2D === 'arrow' && (<>{field('Length', arrowLen, setArrowLen)}{field('Head Width', arrowHW, setArrowHW)}{field('Head Length', arrowHL, setArrowHL)}{field('Shaft Width', arrowSW, setArrowSW)}</>)}
-              {shape2D === 'wedge' && (<>{field('Width', wedgeW, setWedgeW)}{field('Depth', wedgeD, setWedgeD)}{field('Thickness', wedgeT, setWedgeT)}</>)}
-              {shape2D === 'ribbon' && (<>{field('Width', ribW, setRibW)}{field('Height', ribH, setRibH)}{field('Thickness', ribT, setRibT)}</>)}
-              {/* lines */}
-              {shape2D === 'straight' && (<>{field('Length', lineLen, setLineLen)}{field('Width', lineW, setLineW)}</>)}
-              {shape2D === 'curved' && (<>{field('Length', lineLen, setLineLen)}{field('Curvature', curvature, setCurvature, 0.05)}{field('Width', lineW, setLineW)}</>)}
-              {shape2D === 'broken' && (<>{field('Length 1', brokenL1, setBrokenL1)}{field('Length 2', brokenL2, setBrokenL2)}{angleField('Angle°', brokenAngle, setBrokenAngle)}{field('Width', lineW, setLineW)}</>)}
-              {shape2D === 'zigzag' && (<>{field('Width', zzW, setZzW)}{field('Height', zzH, setZzH)}{intField('Zigzags', zzSegs, setZzSegs, 1)}{field('Thickness', zzT, setZzT)}</>)}
-            </div>
-          </>
-        )}
+                <div className={styles.shapeGrid}>
+                  {SHAPES_BY_CATEGORY[category].map(({ type: t, label }) => (
+                    <button
+                      key={t}
+                      className={`${styles.shapeBtn} ${shape2D === t ? styles.shapeBtnActive : ''}`}
+                      onClick={() => setShape2D(t)}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+
+                <div className={styles.fields}>
+                  {shape2D === 'circle' && (<>{field('Radius', radius, setRadius)}{intField('Segments', segments, setSegments, 3)}</>)}
+                  {shape2D === 'ellipse' && (<>{field('Radius X', radiusX, setRadiusX)}{field('Radius Z', radiusZ, setRadiusZ)}{intField('Segments', segments, setSegments, 3)}</>)}
+                  {shape2D === 'oval' && (<>{field('Width', ovalW, setOvalW)}{field('Height', ovalH, setOvalH)}{intField('Segments', segments, setSegments, 4)}</>)}
+                  {shape2D === 'semicircle' && (<>{field('Radius', radius, setRadius)}{intField('Segments', segments, setSegments, 3)}</>)}
+                  {shape2D === 'arc' && (<>{field('Inner Radius', innerRadius, setInnerRadius)}{field('Outer Radius', outerRadius, setOuterRadius)}{angleField('Start Angle°', startAngle, setStartAngle)}{angleField('End Angle°', endAngle, setEndAngle)}{intField('Segments', segments, setSegments, 2)}{field('Rise', arcRise, setArcRise, 0.1, 3, -Infinity)}</>)}
+                  {(shape2D === 'ring' || shape2D === 'crown') && (<>{field('Inner Radius', innerRadius, setInnerRadius)}{field('Outer Radius', outerRadius, setOuterRadius)}{intField('Segments', segments, setSegments, 3)}{field('Rise', ringRise, setRingRise, 0.1, 3, -Infinity)}</>)}
+                  {shape2D === 'sector' && (<>{field('Radius', radius, setRadius)}{angleField('Start Angle°', startAngle, setStartAngle)}{angleField('End Angle°', endAngle, setEndAngle)}{intField('Segments', segments, setSegments, 2)}</>)}
+                  {shape2D === 'segment' && (<>{field('Radius', radius, setRadius)}{angleField('Start Angle°', startAngle, setStartAngle)}{angleField('End Angle°', endAngle, setEndAngle)}{intField('Segments', segments, setSegments, 2)}</>)}
+                  {shape2D === 'crescent' && (<>{field('Outer Radius', cresOuterR, setCresOuterR)}{field('Inner Radius', cresInnerR, setCresInnerR)}{field('Offset', cresOffset, setCresOffset)}{intField('Segments', segments, setSegments, 8)}</>)}
+                  {shape2D === 'spiral' && (<>{field('Inner Radius', spiralInner, setSpiralInner)}{field('Outer Radius', spiralOuter, setSpiralOuter)}{field('Turns', spiralTurns, setSpiralTurns, 0.5, 1, 0.5)}{field('Width', spiralWidth, setSpiralWidth)}{intField('Segments', segments, setSegments, 4)}{field('Rise / Turn', spiralRise, setSpiralRise, 0.1, 3, -Infinity)}</>)}
+                  {shape2D === 'triangle' && (<>{field('Base', triBase, setTriBase)}{field('Height', triHeight, setTriHeight)}</>)}
+                  {shape2D === 'isosceles' && (<>{field('Base', isoBase, setIsoBase)}{field('Height', isoHeight, setIsoHeight)}</>)}
+                  {shape2D === 'elongated' && (<>{field('Base', eloBase, setEloBase)}{field('Height', eloHeight, setEloHeight)}</>)}
+                  {shape2D === 'equilateral' && (<>{field('Side', triSide, setTriSide)}</>)}
+                  {shape2D === 'scalene' && (<>{field('Base', triBase, setTriBase)}{field('Height', triHeight, setTriHeight)}{field('Offset', scaleOffset, setScaleOffset, 0.1)}</>)}
+                  {(shape2D === 'rectangle' || shape2D === 'rhomboid' || shape2D === 'parallelogram') && (<>{field('Width', rectW, setRectW)}{field('Height', rectH, setRectH)}{shape2D !== 'rectangle' && field('Skew', skew, setSkew, 0.1)}</>)}
+                  {shape2D === 'square' && (<>{field('Size', squareSize, setSquareSize)}</>)}
+                  {shape2D === 'rhombus' && (<>{field('Diagonal H', rhDiagH, setRhDiagH)}{field('Diagonal V', rhDiagV, setRhDiagV)}</>)}
+                  {shape2D === 'trapezoid' && (<>{field('Top Width', trapTop, setTrapTop)}{field('Bottom Width', trapBot, setTrapBot)}{field('Height', trapH, setTrapH)}</>)}
+                  {shape2D === 'kite' && (<>{field('Width', kiteW, setKiteW)}{field('Top Height', kiteTop, setKiteTop)}{field('Bottom Height', kiteBot, setKiteBot)}</>)}
+                  {(shape2D === 'pentagon' || shape2D === 'hexagon' || shape2D === 'heptagon' || shape2D === 'octagon') && (<>{field('Radius', polyRadius, setPolyRadius)}</>)}
+                  {shape2D === 'irregular' && (<>{field('Radius', polyRadius, setPolyRadius)}{intField('Sides', polySides, setPolySides, 3)}{field('Irregularity', irregularity, setIrregularity, 0.05, 2, 0)}</>)}
+                  {shape2D === 'star' && (<>{field('Outer Radius', starOuter, setStarOuter)}{field('Inner Radius', starInner, setStarInner)}{intField('Points', starPoints, setStarPoints, 3)}</>)}
+                  {shape2D === 'arrow' && (<>{field('Length', arrowLen, setArrowLen)}{field('Head Width', arrowHW, setArrowHW)}{field('Head Length', arrowHL, setArrowHL)}{field('Shaft Width', arrowSW, setArrowSW)}</>)}
+                  {shape2D === 'wedge' && (<>{field('Width', wedgeW, setWedgeW)}{field('Depth', wedgeD, setWedgeD)}{field('Thickness', wedgeT, setWedgeT)}</>)}
+                  {shape2D === 'ribbon' && (<>{field('Width', ribW, setRibW)}{field('Height', ribH, setRibH)}{field('Thickness', ribT, setRibT)}</>)}
+                  {shape2D === 'straight' && (<>{field('Length', lineLen, setLineLen)}{field('Width', lineW, setLineW)}</>)}
+                  {shape2D === 'curved' && (<>{field('Length', lineLen, setLineLen)}{field('Curvature', curvature, setCurvature, 0.05)}{field('Width', lineW, setLineW)}</>)}
+                  {shape2D === 'broken' && (<>{field('Length 1', brokenL1, setBrokenL1)}{field('Length 2', brokenL2, setBrokenL2)}{angleField('Angle°', brokenAngle, setBrokenAngle)}{field('Width', lineW, setLineW)}</>)}
+                  {shape2D === 'zigzag' && (<>{field('Width', zzW, setZzW)}{field('Height', zzH, setZzH)}{intField('Zigzags', zzSegs, setZzSegs, 1)}{field('Thickness', zzT, setZzT)}</>)}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Name field */}
+        <div className={styles.nameRow}>
+          <span className={styles.nameLabel}>Name</span>
+          <input
+            className={styles.nameInput}
+            type="text"
+            placeholder={namePlaceholder}
+            value={objectName}
+            onChange={e => setObjectName(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') handleAdd() }}
+          />
+        </div>
 
         <div className={styles.actions}>
           <button className={styles.cancelBtn} onClick={onClose}>Cancel</button>

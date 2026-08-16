@@ -5,6 +5,7 @@ export interface TorusParams {
   tube?: number
   radialSegments?: number
   tubularSegments?: number
+  rise?: number
 }
 
 export function createTorus(params: TorusParams = {}): MeshData {
@@ -13,6 +14,7 @@ export function createTorus(params: TorusParams = {}): MeshData {
     tube = 0.2,
     radialSegments = 12,
     tubularSegments = 32,
+    rise = 0,
   } = params
 
   const rs = Math.max(3, Math.round(radialSegments))
@@ -31,10 +33,10 @@ export function createTorus(params: TorusParams = {}): MeshData {
       const cosTheta = Math.cos(theta), sinTheta = Math.sin(theta)
       pos.push(
         (radius + tube * cosPhi) * cosTheta,
-        tube * sinPhi,
+        tube * sinPhi + (i / ts) * rise,
         (radius + tube * cosPhi) * sinTheta,
       )
-      nrm.push(cosPhi * cosTheta, sinPhi, cosPhi * sinTheta)
+      if (rise === 0) nrm.push(cosPhi * cosTheta, sinPhi, cosPhi * sinTheta)
       uvArr.push(i / ts, j / rs)
     }
   }
@@ -49,10 +51,11 @@ export function createTorus(params: TorusParams = {}): MeshData {
     }
   }
 
-  return {
+  const result: MeshData = {
     positions: new Float32Array(pos),
-    normals: new Float32Array(nrm),
     uvs: new Float32Array(uvArr),
     indices: new Uint32Array(idx),
   }
+  if (rise === 0) result.normals = new Float32Array(nrm)
+  return result
 }

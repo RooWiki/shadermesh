@@ -5,9 +5,10 @@ export interface ConeParams {
   radius?: number
   height?: number
   radialSegments?: number
+  rise?: number
 }
 
 export function createCone(params: ConeParams = {}): MeshData {
-  const { radius = 0.5, height = 1, radialSegments = 16 } = params
-  return createCylinder({ radiusTop: 0, radiusBottom: radius, height, radialSegments, heightSegments: 1 })
+  const { radius = 0.5, height = 1, radialSegments = 16, rise = 0 } = params
+  return createCylinder({ radiusTop: 0, radiusBottom: radius, height, radialSegments, heightSegments: 1, rise })
 }
