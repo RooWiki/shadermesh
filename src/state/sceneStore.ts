@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { subscribeWithSelector } from 'zustand/middleware'
-import type { MeshObject, Transform } from '../core/MeshObject'
+import type { MeshObject, Transform, PrimitiveSource } from '../core/MeshObject'
 import { createMeshObject } from '../core/MeshObject'
 import { createPlane, createCube, createSphere, createCylinder, createCone, createTorus, createCapsule, createShape2D } from '../geometry/primitives'
 import type { CylinderParams, ConeParams, TorusParams, CapsuleParams, Shape2DType, Shape2DParams } from '../geometry/primitives'
@@ -32,7 +32,21 @@ function cloneObjects(objects: MeshObject[]): MeshObject[] {
       colors:   o.meshData.colors   ? new Float32Array(o.meshData.colors)   : undefined,
       indices:  new Uint32Array(o.meshData.indices),
     },
+    sourceParams: o.sourceParams ? { ...o.sourceParams } as PrimitiveSource : undefined,
   }))
+}
+
+function generateMeshFromSource(source: PrimitiveSource) {
+  switch (source.kind) {
+    case 'plane':    return createPlane(source.params)
+    case 'cube':     return createCube(source.params)
+    case 'sphere':   return createSphere(source.params)
+    case 'cylinder': return createCylinder(source.params)
+    case 'cone':     return createCone(source.params)
+    case 'torus':    return createTorus(source.params)
+    case 'capsule':  return createCapsule(source.params)
+    case 'shape2d':  return createShape2D(source.shapeType, source.params)
+  }
 }
 
 interface SceneState {
@@ -67,6 +81,7 @@ interface SceneState {
   importObject: (meshData: import('../core/MeshData').MeshData, name: string) => string
   removeObject: (id: string) => void
   renameObject: (id: string, name: string) => void
+  updatePrimitiveParams: (id: string, source: PrimitiveSource) => void
   selectObject: (id: string | null) => void
   setHovered: (id: string | null) => void
 
@@ -175,8 +190,8 @@ export const useSceneStore = create<SceneState>()(
       get().pushHistory()
       const id = nextId()
       const name = `Plane.${String(objectCounter).padStart(3, '0')}`
-      const meshData = createPlane(params)
-      const obj = createMeshObject(id, name, meshData)
+      const source: PrimitiveSource = { kind: 'plane', params: { width: params.width ?? 1, height: params.height ?? 1, subdivisionsX: params.subdivisionsX ?? 1, subdivisionsY: params.subdivisionsY ?? 1 } }
+      const obj = { ...createMeshObject(id, name, createPlane(source.params)), sourceParams: source }
       set(s => ({ objects: [...s.objects, obj], selectedObjectId: id }))
       return id
     },
@@ -185,8 +200,8 @@ export const useSceneStore = create<SceneState>()(
       get().pushHistory()
       const id = nextId()
       const name = `Cube.${String(objectCounter).padStart(3, '0')}`
-      const meshData = createCube(params)
-      const obj = createMeshObject(id, name, meshData)
+      const source: PrimitiveSource = { kind: 'cube', params: { width: params.width ?? 1, height: params.height ?? 1, depth: params.depth ?? 1 } }
+      const obj = { ...createMeshObject(id, name, createCube(source.params)), sourceParams: source }
       set(s => ({ objects: [...s.objects, obj], selectedObjectId: id }))
       return id
     },
@@ -195,8 +210,8 @@ export const useSceneStore = create<SceneState>()(
       get().pushHistory()
       const id = nextId()
       const name = `Sphere.${String(objectCounter).padStart(3, '0')}`
-      const meshData = createSphere(params)
-      const obj = createMeshObject(id, name, meshData)
+      const source: PrimitiveSource = { kind: 'sphere', params: { radius: params.radius ?? 0.5, widthSegments: params.widthSegments ?? 32, heightSegments: params.heightSegments ?? 16 } }
+      const obj = { ...createMeshObject(id, name, createSphere(source.params)), sourceParams: source }
       set(s => ({ objects: [...s.objects, obj], selectedObjectId: id }))
       return id
     },
@@ -205,8 +220,8 @@ export const useSceneStore = create<SceneState>()(
       get().pushHistory()
       const id = nextId()
       const name = `Cylinder.${String(objectCounter).padStart(3, '0')}`
-      const meshData = createCylinder(params)
-      const obj = createMeshObject(id, name, meshData)
+      const source: PrimitiveSource = { kind: 'cylinder', params: { radiusTop: params.radiusTop ?? 0.5, radiusBottom: params.radiusBottom ?? 0.5, height: params.height ?? 1, radialSegments: params.radialSegments ?? 16, heightSegments: params.heightSegments ?? 1, rise: params.rise ?? 0 } }
+      const obj = { ...createMeshObject(id, name, createCylinder(source.params)), sourceParams: source }
       set(s => ({ objects: [...s.objects, obj], selectedObjectId: id }))
       return id
     },
@@ -215,8 +230,8 @@ export const useSceneStore = create<SceneState>()(
       get().pushHistory()
       const id = nextId()
       const name = `Cone.${String(objectCounter).padStart(3, '0')}`
-      const meshData = createCone(params)
-      const obj = createMeshObject(id, name, meshData)
+      const source: PrimitiveSource = { kind: 'cone', params: { radius: params.radius ?? 0.5, height: params.height ?? 1, radialSegments: params.radialSegments ?? 16, rise: params.rise ?? 0 } }
+      const obj = { ...createMeshObject(id, name, createCone(source.params)), sourceParams: source }
       set(s => ({ objects: [...s.objects, obj], selectedObjectId: id }))
       return id
     },
@@ -225,8 +240,8 @@ export const useSceneStore = create<SceneState>()(
       get().pushHistory()
       const id = nextId()
       const name = `Torus.${String(objectCounter).padStart(3, '0')}`
-      const meshData = createTorus(params)
-      const obj = createMeshObject(id, name, meshData)
+      const source: PrimitiveSource = { kind: 'torus', params: { radius: params.radius ?? 0.5, tube: params.tube ?? 0.2, radialSegments: params.radialSegments ?? 12, tubularSegments: params.tubularSegments ?? 32, rise: params.rise ?? 0 } }
+      const obj = { ...createMeshObject(id, name, createTorus(source.params)), sourceParams: source }
       set(s => ({ objects: [...s.objects, obj], selectedObjectId: id }))
       return id
     },
@@ -235,8 +250,8 @@ export const useSceneStore = create<SceneState>()(
       get().pushHistory()
       const id = nextId()
       const name = `Capsule.${String(objectCounter).padStart(3, '0')}`
-      const meshData = createCapsule(params)
-      const obj = createMeshObject(id, name, meshData)
+      const source: PrimitiveSource = { kind: 'capsule', params: { radius: params.radius ?? 0.4, height: params.height ?? 1, radialSegments: params.radialSegments ?? 16, hemisphereSegments: params.hemisphereSegments ?? 8 } }
+      const obj = { ...createMeshObject(id, name, createCapsule(source.params)), sourceParams: source }
       set(s => ({ objects: [...s.objects, obj], selectedObjectId: id }))
       return id
     },
@@ -246,8 +261,8 @@ export const useSceneStore = create<SceneState>()(
       const id = nextId()
       const label = type.charAt(0).toUpperCase() + type.slice(1)
       const name = `${label}.${String(objectCounter).padStart(3, '0')}`
-      const meshData = createShape2D(type, params)
-      const obj = createMeshObject(id, name, meshData)
+      const source: PrimitiveSource = { kind: 'shape2d', shapeType: type, params: { ...params } }
+      const obj = { ...createMeshObject(id, name, createShape2D(type, params)), sourceParams: source }
       set(s => ({ objects: [...s.objects, obj], selectedObjectId: id }))
       return id
     },
@@ -272,6 +287,14 @@ export const useSceneStore = create<SceneState>()(
       const trimmed = name.trim()
       if (!trimmed) return
       set(s => ({ objects: s.objects.map(o => o.id === id ? { ...o, name: trimmed } : o) }))
+    },
+
+    updatePrimitiveParams: (id, source) => {
+      get().pushHistory()
+      const meshData = generateMeshFromSource(source)
+      set(s => ({
+        objects: s.objects.map(o => o.id !== id ? o : { ...o, meshData, sourceParams: source }),
+      }))
     },
 
     selectObject: (id) => set({ selectedObjectId: id, selectedVertexIndices: [], selectedFaceIndices: [] }),

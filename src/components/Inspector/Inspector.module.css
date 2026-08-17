@@ -232,6 +232,41 @@
   font-weight: 600;
 }
 
+/* Primitive params */
+.paramRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 12px;
+  gap: 8px;
+}
+
+.paramLabel {
+  font-size: 11px;
+  color: #7070a0;
+  flex-shrink: 0;
+}
+
+.paramInput {
+  width: 72px;
+  text-align: right;
+  background: #111120;
+  border: 1px solid #2a2a3a;
+  border-radius: 3px;
+  color: #e0e0f4;
+  font-size: 12px;
+  padding: 3px 5px;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  outline: none;
+  cursor: ew-resize;
+  flex-shrink: 0;
+}
+
+.paramInput:focus {
+  border-color: #5c7cfa;
+  cursor: text;
+}
+
 /* UV Viewer */
 .uvViewer {
   border-top: 1px solid #2a2a36;

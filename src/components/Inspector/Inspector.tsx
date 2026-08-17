@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useSceneStore } from '../../state/sceneStore'
 import { TransformPanel } from './TransformPanel'
 import { MeshDataPanel } from './MeshDataPanel'
+import { PrimitiveParamsPanel } from './PrimitiveParamsPanel'
 import { VertexPanel, VertexGroupPanel } from './VertexPanel'
 import { FacePanel, FaceGroupPanel } from './FacePanel'
 import { UVViewer } from './UVViewer'
@@ -76,6 +77,9 @@ export function Inspector() {
                 transform={obj.transform}
                 onTransformChange={t => updateTransform(obj.id, t)}
               />
+              {obj.sourceParams && (
+                <PrimitiveParamsPanel objectId={obj.id} sourceParams={obj.sourceParams} />
+              )}
               <MeshDataPanel obj={obj} />
             </>
           )}
