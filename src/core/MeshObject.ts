@@ -1,5 +1,6 @@
 import type { MeshData } from './MeshData'
 import type { Shape2DType, Shape2DParams } from '../geometry/primitives/create2DShapes'
+import type { UVMapConfig } from '../geometry/uvProjection'
 
 export type PrimitiveSource =
   | { kind: 'plane';     params: { width: number; height: number; subdivisionsX: number; subdivisionsY: number } }
@@ -24,6 +25,7 @@ export interface MeshObject {
   transform: Transform
   visible: boolean
   sourceParams?: PrimitiveSource
+  uvMap?: UVMapConfig
 }
 
 export function defaultTransform(): Transform {

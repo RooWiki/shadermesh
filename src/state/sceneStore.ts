@@ -2,6 +2,8 @@ import { create } from 'zustand'
 import { subscribeWithSelector } from 'zustand/middleware'
 import type { MeshObject, Transform, PrimitiveSource } from '../core/MeshObject'
 import { createMeshObject } from '../core/MeshObject'
+import type { UVMapConfig } from '../geometry/uvProjection'
+import { projectUVs, applyUVTransforms } from '../geometry/uvProjection'
 import { createPlane, createCube, createSphere, createCylinder, createCone, createTorus, createCapsule, createShape2D } from '../geometry/primitives'
 import type { CylinderParams, ConeParams, TorusParams, CapsuleParams, Shape2DType, Shape2DParams } from '../geometry/primitives'
 import { recalculateFlatNormals, recalculateSmoothNormals } from '../geometry/normals'
@@ -33,6 +35,7 @@ function cloneObjects(objects: MeshObject[]): MeshObject[] {
       indices:  new Uint32Array(o.meshData.indices),
     },
     sourceParams: o.sourceParams ? { ...o.sourceParams } as PrimitiveSource : undefined,
+    uvMap: o.uvMap ? { ...o.uvMap } : undefined,
   }))
 }
 
@@ -82,6 +85,7 @@ interface SceneState {
   removeObject: (id: string) => void
   renameObject: (id: string, name: string) => void
   updatePrimitiveParams: (id: string, source: PrimitiveSource) => void
+  applyUVProjection: (id: string, config: UVMapConfig) => void
   selectObject: (id: string | null) => void
   setHovered: (id: string | null) => void
 
@@ -294,6 +298,24 @@ export const useSceneStore = create<SceneState>()(
       const meshData = generateMeshFromSource(source)
       set(s => ({
         objects: s.objects.map(o => o.id !== id ? o : { ...o, meshData, sourceParams: source }),
+      }))
+    },
+
+    applyUVProjection: (id, config) => {
+      get().pushHistory()
+      set(s => ({
+        objects: s.objects.map(o => {
+          if (o.id !== id) return o
+          let baseUVs: Float32Array | undefined
+          if (config.projection === 'shape_default') {
+            baseUVs = o.sourceParams ? generateMeshFromSource(o.sourceParams).uvs : o.meshData.uvs
+          } else {
+            baseUVs = projectUVs(o.meshData.positions, o.meshData.normals, config.projection)
+          }
+          if (!baseUVs) return { ...o, uvMap: config }
+          const newUVs = applyUVTransforms(baseUVs, config)
+          return { ...o, meshData: { ...o.meshData, uvs: newUVs }, uvMap: config }
+        }),
       }))
     },
 
