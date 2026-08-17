@@ -8,6 +8,7 @@ import styles from './Inspector.module.css'
 const PROJECTIONS: { value: UVProjectionType; label: string }[] = [
   { value: 'shape_default', label: 'Shape Default' },
   { value: 'planar',        label: 'Planar' },
+  { value: 'disc',          label: 'Disc' },
   { value: 'radial',        label: 'Radial' },
   { value: 'cylindrical',   label: 'Cylindrical' },
   { value: 'spherical',     label: 'Spherical' },
