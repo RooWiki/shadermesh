@@ -1,6 +1,7 @@
 import type { PrimitiveSource } from '../../core/MeshObject'
 import { useSceneStore } from '../../state/sceneStore'
 import { NumberInput } from './NumberInput'
+import { makeLabelDrag } from './labelDrag'
 import styles from './Inspector.module.css'
 
 const INT_KEYS = new Set(['radialSegments', 'tubularSegments', 'heightSegments', 'widthSegments', 'hemisphereSegments', 'subdivisionsX', 'subdivisionsY', 'sides', 'points', 'zigzags', 'segments'])
@@ -17,7 +18,10 @@ function ParamRow({ label, value, onChange, isInt }: {
 }) {
   return (
     <div className={styles.paramRow}>
-      <span className={styles.paramLabel}>{label}</span>
+      <span
+        className={styles.paramLabel}
+        onMouseDown={makeLabelDrag(value, onChange, isInt ? 1 : 0.01, isInt ? 0 : 3)}
+      >{label}</span>
       <NumberInput
         value={value}
         onChange={onChange}

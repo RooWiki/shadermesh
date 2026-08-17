@@ -1,5 +1,6 @@
 import type { Transform } from '../../core/MeshObject'
 import { NumberInput } from './NumberInput'
+import { makeLabelDrag } from './labelDrag'
 import styles from './Inspector.module.css'
 
 interface Vec3InputProps {
@@ -27,7 +28,10 @@ function Vec3Input({ label, values, onChange, step = 0.1, decimals = 3 }: Vec3In
       <div className={styles.vec3Inputs}>
         {axes.map((ax, i) => (
           <label key={ax} className={styles.axisField}>
-            <span className={`${styles.axisTag} ${styles[AXIS_COLORS[i]]}`}>{ax}</span>
+            <span
+              className={`${styles.axisTag} ${styles[AXIS_COLORS[i]]}`}
+              onMouseDown={makeLabelDrag(values[i], n => handleChange(i, n), step, decimals)}
+            >{ax}</span>
             <NumberInput
               value={values[i]}
               onChange={n => handleChange(i, n)}

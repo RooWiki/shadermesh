@@ -123,6 +123,8 @@
   justify-content: center;
   background: #1e1e2e;
   border-right: 1px solid #2a2a3a;
+  cursor: ew-resize;
+  user-select: none;
 }
 
 .axisX { color: #ff6060; background: #2a1515; border-right-color: #3a2020; }
@@ -245,6 +247,8 @@
   font-size: 11px;
   color: #7070a0;
   flex-shrink: 0;
+  cursor: ew-resize;
+  user-select: none;
 }
 
 .paramInput {

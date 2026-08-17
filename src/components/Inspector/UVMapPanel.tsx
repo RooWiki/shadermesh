@@ -2,6 +2,7 @@ import type { UVMapConfig, UVProjectionType } from '../../geometry/uvProjection'
 import { defaultUVMapConfig } from '../../geometry/uvProjection'
 import { useSceneStore } from '../../state/sceneStore'
 import { NumberInput } from './NumberInput'
+import { makeLabelDrag } from './labelDrag'
 import styles from './Inspector.module.css'
 
 const PROJECTIONS: { value: UVProjectionType; label: string }[] = [
@@ -44,28 +45,28 @@ export function UVMapPanel({ objectId, uvMap }: Props) {
 
       <div className={styles.uvRow2}>
         <div className={styles.paramRow}>
-          <span className={styles.paramLabel}>Scale X</span>
+          <span className={styles.paramLabel} onMouseDown={makeLabelDrag(cfg.scaleX, v => update({ scaleX: v }), 0.1, 3)}>Scale X</span>
           <NumberInput value={cfg.scaleX} onChange={v => update({ scaleX: v })} step={0.1} decimals={3} className={styles.paramInput} />
         </div>
         <div className={styles.paramRow}>
-          <span className={styles.paramLabel}>Scale Y</span>
+          <span className={styles.paramLabel} onMouseDown={makeLabelDrag(cfg.scaleY, v => update({ scaleY: v }), 0.1, 3)}>Scale Y</span>
           <NumberInput value={cfg.scaleY} onChange={v => update({ scaleY: v })} step={0.1} decimals={3} className={styles.paramInput} />
         </div>
       </div>
 
       <div className={styles.uvRow2}>
         <div className={styles.paramRow}>
-          <span className={styles.paramLabel}>Offset X</span>
+          <span className={styles.paramLabel} onMouseDown={makeLabelDrag(cfg.offsetX, v => update({ offsetX: v }), 0.01, 3)}>Offset X</span>
           <NumberInput value={cfg.offsetX} onChange={v => update({ offsetX: v })} step={0.01} decimals={3} className={styles.paramInput} />
         </div>
         <div className={styles.paramRow}>
-          <span className={styles.paramLabel}>Offset Y</span>
+          <span className={styles.paramLabel} onMouseDown={makeLabelDrag(cfg.offsetY, v => update({ offsetY: v }), 0.01, 3)}>Offset Y</span>
           <NumberInput value={cfg.offsetY} onChange={v => update({ offsetY: v })} step={0.01} decimals={3} className={styles.paramInput} />
         </div>
       </div>
 
       <div className={styles.paramRow}>
-        <span className={styles.paramLabel}>Rotation</span>
+        <span className={styles.paramLabel} onMouseDown={makeLabelDrag(cfg.rotation, v => update({ rotation: v }), 1, 1)}>Rotation</span>
         <NumberInput value={cfg.rotation} onChange={v => update({ rotation: v })} step={1} decimals={1} className={styles.paramInput} />
       </div>
 
