@@ -267,6 +267,57 @@
   cursor: text;
 }
 
+/* Spacer pushes export to bottom */
+.spacer {
+  flex: 1;
+}
+
+/* Export panel — highlighted at bottom */
+.exportPanel {
+  flex-shrink: 0;
+  margin: 8px;
+  border: 1px solid #4a6fa8;
+  border-radius: 6px;
+  background: #161824;
+  overflow: hidden;
+}
+
+.exportTitle {
+  padding: 6px 10px 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #7aa0d4;
+}
+
+.exportRow {
+  display: flex;
+  gap: 6px;
+  padding: 4px 8px 8px;
+}
+
+.exportBtn {
+  flex: 1;
+  padding: 6px 0;
+  background: #1e2a42;
+  border: 1px solid #3a5a8a;
+  color: #7aaae8;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  border-radius: 4px;
+  cursor: pointer;
+  text-transform: uppercase;
+  transition: all 0.1s;
+}
+
+.exportBtn:hover {
+  background: #2a3a5a;
+  border-color: #6a9ad8;
+  color: #a0c8ff;
+}
+
 /* UV Viewer */
 .uvViewer {
   border-top: 1px solid #2a2a36;

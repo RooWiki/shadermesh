@@ -6,7 +6,35 @@ import { PrimitiveParamsPanel } from './PrimitiveParamsPanel'
 import { VertexPanel, VertexGroupPanel } from './VertexPanel'
 import { FacePanel, FaceGroupPanel } from './FacePanel'
 import { UVViewer } from './UVViewer'
+import { exportOBJ } from '../../io/exportOBJ'
+import { exportJSON } from '../../io/exportJSON'
+import { downloadText } from '../../io/fileUtils'
+import type { MeshObject } from '../../core/MeshObject'
 import styles from './Inspector.module.css'
+
+function ExportPanel({ obj }: { obj: MeshObject }) {
+  return (
+    <div className={styles.exportPanel}>
+      <div className={styles.exportTitle}>Export</div>
+      <div className={styles.exportRow}>
+        <button
+          className={styles.exportBtn}
+          onClick={() => downloadText(exportOBJ(obj.meshData, obj.name), `${obj.name}.obj`)}
+          title="Export as Wavefront OBJ"
+        >
+          OBJ
+        </button>
+        <button
+          className={styles.exportBtn}
+          onClick={() => downloadText(exportJSON(obj.meshData, obj.name), `${obj.name}.json`)}
+          title="Export as JSON (all attributes)"
+        >
+          JSON
+        </button>
+      </div>
+    </div>
+  )
+}
 
 function InlineRename({ value, onCommit }: { value: string; onCommit: (n: string) => void }) {
   const [draft, setDraft] = useState(value)
@@ -115,6 +143,9 @@ export function Inspector() {
               selectedFaceIndex={editorMode === 'face' && selectedFaceIndices.length === 1 ? selectedFaceIndices[0] : null}
             />
           )}
+
+          <div className={styles.spacer} />
+          <ExportPanel obj={obj} />
         </>
       )}
     </div>
