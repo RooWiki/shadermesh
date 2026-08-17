@@ -58,10 +58,14 @@ export function projectUVs(
 }
 
 /**
- * Radial (polar) UV projection with seam-fix via vertex duplication.
- * U = angle around Y axis [0,1], V = normalized distance from center [0,1].
- * Triangles crossing the atan2 seam get a duplicate vertex with adjusted U
- * so the GPU interpolates across a tiny gap instead of the full [0,1] width.
+ * Radial (polar) UV projection: U = angle [0,1], V = distance from center [0,1].
+ *
+ * Two fixes applied via vertex duplication:
+ * 1. Center singularity — the fan center vertex is duplicated once per triangle,
+ *    each copy gets U = midpoint angle of that triangle so pie-slice divisions
+ *    are visible all the way to the center.
+ * 2. atan2 seam — any triangle still crossing U=0/1 after fix #1 gets its
+ *    minority-side edge vertex duplicated with U±1.
  */
 export function projectRadialUVsWithSeamFix(
   positions: Float32Array,
@@ -98,45 +102,78 @@ export function projectRadialUVsWithSeamFix(
   const idxArr: number[] = Array.from(indices)
   const extraVertexSources: number[] = []
 
-  // hiDup: original index → new index with U+1 (minority low vertex surrounded by high vertices)
-  // loDup: original index → new index with U-1 (minority high vertex surrounded by low vertices)
   const hiDup = new Map<number, number>()
   const loDup = new Map<number, number>()
 
+  // Wrapped average of two U values in [0,1] — takes the short arc
+  const wrapMid = (a: number, b: number): number => {
+    let d = b - a
+    if (d > 0.5) d -= 1
+    if (d < -0.5) d += 1
+    let m = a + d / 2
+    if (m < 0) m += 1
+    if (m > 1) m -= 1
+    return m
+  }
+
+  const POLE_EPS = 1e-4 // V threshold for "center / pole" vertex
   const triCount = indices.length / 3
+
   for (let t = 0; t < triCount; t++) {
-    const i0 = indices[t * 3], i1 = indices[t * 3 + 1], i2 = indices[t * 3 + 2]
-    const u0 = baseU[i0], u1 = baseU[i1], u2 = baseU[i2]
+    const vi = [indices[t * 3], indices[t * 3 + 1], indices[t * 3 + 2]]
 
-    if (Math.max(u0, u1, u2) - Math.min(u0, u1, u2) <= 0.5) continue
+    // --- Fix 1: per-triangle center vertex ---
+    // Identify pole vertices (V ≈ 0) and edge vertices (V > 0)
+    const isPole = vi.map(i => baseV[i] <= POLE_EPS)
+    const edgeVi = vi.filter((_, k) => !isPole[k])
 
-    const h0 = u0 > 0.5, h1 = u1 > 0.5, h2 = u2 > 0.5
-    const highCount = (h0 ? 1 : 0) + (h1 ? 1 : 0) + (h2 ? 1 : 0)
+    if (isPole.some(Boolean) && edgeVi.length >= 2) {
+      const midU = wrapMid(baseU[edgeVi[0]], baseU[edgeVi[1]])
+      for (let k = 0; k < 3; k++) {
+        if (!isPole[k]) continue
+        const origIdx = vi[k]
+        const newIdx = posArr.length / 3
+        posArr.push(positions[origIdx * 3], positions[origIdx * 3 + 1], positions[origIdx * 3 + 2])
+        if (nrmArr && normals) nrmArr.push(normals[origIdx * 3], normals[origIdx * 3 + 1], normals[origIdx * 3 + 2])
+        uvUArr.push(midU)
+        uvVArr.push(baseV[origIdx])
+        extraVertexSources.push(origIdx)
+        idxArr[t * 3 + k] = newIdx
+      }
+    }
+
+    // --- Fix 2: seam crossing ---
+    // Read updated U values (after fix 1)
+    const cu = [0, 1, 2].map(k => {
+      const idx = idxArr[t * 3 + k]
+      return idx < vertCount ? baseU[idx] : uvUArr[idx]
+    })
+
+    const span = Math.max(...cu) - Math.min(...cu)
+    if (span <= 0.5) continue
+
+    const h = cu.map(u => u > 0.5)
+    const highCount = h.filter(Boolean).length
     const makeHigh = highCount >= 2
 
-    const verts = [i0, i1, i2]
-    const isHigh = [h0, h1, h2]
-
-    for (let v = 0; v < 3; v++) {
-      const isMinority = makeHigh ? !isHigh[v] : isHigh[v]
+    for (let k = 0; k < 3; k++) {
+      const isMinority = makeHigh ? !h[k] : h[k]
       if (!isMinority) continue
 
-      const origIdx = verts[v]
-      const map = makeHigh ? hiDup : loDup
+      const origIdx = indices[t * 3 + k] // original vertex (before fix 1)
+      if (baseV[origIdx] <= POLE_EPS) continue // pole already handled above
 
+      const map = makeHigh ? hiDup : loDup
       if (!map.has(origIdx)) {
         const newIdx = posArr.length / 3
         posArr.push(positions[origIdx * 3], positions[origIdx * 3 + 1], positions[origIdx * 3 + 2])
-        if (nrmArr && normals) {
-          nrmArr.push(normals[origIdx * 3], normals[origIdx * 3 + 1], normals[origIdx * 3 + 2])
-        }
+        if (nrmArr && normals) nrmArr.push(normals[origIdx * 3], normals[origIdx * 3 + 1], normals[origIdx * 3 + 2])
         uvUArr.push(baseU[origIdx] + (makeHigh ? 1 : -1))
         uvVArr.push(baseV[origIdx])
         extraVertexSources.push(origIdx)
         map.set(origIdx, newIdx)
       }
-
-      idxArr[t * 3 + v] = map.get(origIdx)!
+      idxArr[t * 3 + k] = map.get(origIdx)!
     }
   }
 
