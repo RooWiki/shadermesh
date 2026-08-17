@@ -3,7 +3,6 @@ import { useSceneStore } from '../../state/sceneStore'
 import { TransformPanel } from './TransformPanel'
 import { MeshDataPanel } from './MeshDataPanel'
 import { PrimitiveParamsPanel } from './PrimitiveParamsPanel'
-import { UVMapPanel } from './UVMapPanel'
 import { VertexPanel, VertexGroupPanel } from './VertexPanel'
 import { FacePanel, FaceGroupPanel } from './FacePanel'
 import { exportOBJ } from '../../io/exportOBJ'
@@ -107,9 +106,6 @@ export function Inspector() {
               />
               {obj.sourceParams && (
                 <PrimitiveParamsPanel objectId={obj.id} sourceParams={obj.sourceParams} />
-              )}
-              {obj.meshData.uvs && (
-                <UVMapPanel objectId={obj.id} uvMap={obj.uvMap} />
               )}
               <MeshDataPanel obj={obj} />
             </>
