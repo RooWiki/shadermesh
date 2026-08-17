@@ -99,6 +99,7 @@ export function ObjectList() {
       {selectedObj?.meshData.uvs && (
         <>
           <UVMapPanel objectId={selectedObj.id} uvMap={selectedObj.uvMap} />
+          <div className={styles.divider} />
           <div className={styles.uvSection}>
             <div className={styles.uvHeader} onClick={() => setUvCollapsed(c => !c)}>
               <span>UV Layout</span>

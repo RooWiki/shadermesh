@@ -85,6 +85,12 @@
   color: #ff6666;
 }
 
+.divider {
+  height: 1px;
+  background: #2a2a36;
+  flex-shrink: 0;
+}
+
 .uvSection {
   flex-shrink: 0;
   border-top: 1px solid #2a2a36;
