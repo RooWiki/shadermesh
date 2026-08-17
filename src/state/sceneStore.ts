@@ -3,7 +3,7 @@ import { subscribeWithSelector } from 'zustand/middleware'
 import type { MeshObject, Transform, PrimitiveSource } from '../core/MeshObject'
 import { createMeshObject } from '../core/MeshObject'
 import type { UVMapConfig } from '../geometry/uvProjection'
-import { projectUVs, applyUVTransforms } from '../geometry/uvProjection'
+import { projectUVs, projectRadialUVsWithSeamFix, applyUVTransforms } from '../geometry/uvProjection'
 import { createPlane, createCube, createSphere, createCylinder, createCone, createTorus, createCapsule, createShape2D } from '../geometry/primitives'
 import type { CylinderParams, ConeParams, TorusParams, CapsuleParams, Shape2DType, Shape2DParams } from '../geometry/primitives'
 import { recalculateFlatNormals, recalculateSmoothNormals } from '../geometry/normals'
@@ -306,15 +306,50 @@ export const useSceneStore = create<SceneState>()(
       set(s => ({
         objects: s.objects.map(o => {
           if (o.id !== id) return o
-          let baseUVs: Float32Array | undefined
+
           if (config.projection === 'shape_default') {
-            baseUVs = o.sourceParams ? generateMeshFromSource(o.sourceParams).uvs : o.meshData.uvs
-          } else {
-            baseUVs = projectUVs(o.meshData.positions, o.meshData.normals, config.projection)
+            const baseUVs = o.sourceParams ? generateMeshFromSource(o.sourceParams).uvs : o.meshData.uvs
+            if (!baseUVs) return { ...o, uvMap: config }
+            return { ...o, meshData: { ...o.meshData, uvs: applyUVTransforms(baseUVs, config) }, uvMap: config }
           }
-          if (!baseUVs) return { ...o, uvMap: config }
-          const newUVs = applyUVTransforms(baseUVs, config)
-          return { ...o, meshData: { ...o.meshData, uvs: newUVs }, uvMap: config }
+
+          if (config.projection === 'radial') {
+            // Always use fresh base mesh to avoid accumulating seam-fix vertices across calls
+            const baseMesh = o.sourceParams ? generateMeshFromSource(o.sourceParams) : o.meshData
+            const r = projectRadialUVsWithSeamFix(baseMesh.positions, baseMesh.normals, baseMesh.indices)
+            // Extend tangents/colors for the duplicated vertices if present
+            let tangents = baseMesh.tangents
+            if (tangents) {
+              const ext = new Float32Array(tangents.length + r.extraVertexSources.length * 4)
+              ext.set(tangents)
+              r.extraVertexSources.forEach((src, i) =>
+                ext.set(tangents!.subarray(src * 4, src * 4 + 4), tangents!.length + i * 4))
+              tangents = ext
+            }
+            let colors = baseMesh.colors
+            if (colors) {
+              const ext = new Float32Array(colors.length + r.extraVertexSources.length * 4)
+              ext.set(colors)
+              r.extraVertexSources.forEach((src, i) =>
+                ext.set(colors!.subarray(src * 4, src * 4 + 4), colors!.length + i * 4))
+              colors = ext
+            }
+            return {
+              ...o,
+              meshData: {
+                positions: r.positions,
+                normals: r.normals,
+                uvs: applyUVTransforms(r.uvs, config),
+                indices: r.indices,
+                tangents,
+                colors,
+              },
+              uvMap: config,
+            }
+          }
+
+          const baseUVs = projectUVs(o.meshData.positions, o.meshData.normals, config.projection)
+          return { ...o, meshData: { ...o.meshData, uvs: applyUVTransforms(baseUVs, config) }, uvMap: config }
         }),
       }))
     },
