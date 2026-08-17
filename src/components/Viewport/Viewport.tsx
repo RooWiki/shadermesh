@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useSceneStore } from '../../state/sceneStore'
 import { SceneManager, type ViewportId } from '../../viewport/SceneManager'
-import { UVViewer } from '../Inspector/UVViewer'
 import styles from './Viewport.module.css'
 
 export function Viewport() {
@@ -28,9 +27,6 @@ export function Viewport() {
 
   const [dragBox, setDragBox] = useState<{ x: number; y: number; w: number; h: number } | null>(null)
   const [maximizedPanel, setMaximizedPanel] = useState<ViewportId | null>(null)
-  const [uvCollapsed, setUvCollapsed] = useState(false)
-
-  const selectedObj = useSceneStore(s => s.objects.find(o => o.id === s.selectedObjectId))
 
   const handleLabelDblClick = (vp: ViewportId) => {
     const next = maximizedPanel === vp ? null : vp
@@ -247,22 +243,6 @@ export function Viewport() {
       <div className={styles.shortcuts}>
         <span>F: Frame &nbsp; Q/W/E/R: Tools</span>
       </div>
-      {selectedObj?.meshData.uvs && (
-        <div className={styles.uvPanel}>
-          <div className={styles.uvPanelHeader} onClick={() => setUvCollapsed(c => !c)}>
-            <span>UV LAYOUT</span>
-            <span className={styles.uvPanelToggle}>{uvCollapsed ? '▲' : '▼'}</span>
-          </div>
-          {!uvCollapsed && (
-            <UVViewer
-              meshData={selectedObj.meshData}
-              selectedVertexIndices={editorMode === 'vertex' ? selectedVertexIndices : []}
-              selectedFaceIndex={editorMode === 'face' && selectedFaceIndices.length === 1 ? selectedFaceIndices[0] : null}
-            />
-          )}
-        </div>
-      )}
-
       {dragBox && (
         <div
           style={{

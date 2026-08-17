@@ -85,6 +85,29 @@
   color: #ff6666;
 }
 
+.uvSection {
+  flex-shrink: 0;
+  border-top: 1px solid #2a2a36;
+}
+
+.uvHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #6a6a80;
+  cursor: pointer;
+  user-select: none;
+}
+
+.uvHeader:hover {
+  color: #9090b0;
+}
+
 .renameInput {
   flex: 1;
   min-width: 0;

@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useSceneStore } from '../../state/sceneStore'
+import { UVViewer } from '../Inspector/UVViewer'
 import styles from './ObjectList.module.css'
 
 interface RenameInputProps {
@@ -45,7 +46,13 @@ export function ObjectList() {
   const selectObject = useSceneStore(s => s.selectObject)
   const removeObject = useSceneStore(s => s.removeObject)
   const renameObject = useSceneStore(s => s.renameObject)
+  const editorMode = useSceneStore(s => s.editorMode)
+  const selectedVertexIndices = useSceneStore(s => s.selectedVertexIndices)
+  const selectedFaceIndices = useSceneStore(s => s.selectedFaceIndices)
   const [renamingId, setRenamingId] = useState<string | null>(null)
+  const [uvCollapsed, setUvCollapsed] = useState(false)
+
+  const selectedObj = objects.find(o => o.id === selectedObjectId)
 
   return (
     <div className={styles.panel}>
@@ -87,6 +94,22 @@ export function ObjectList() {
           </div>
         ))}
       </div>
+
+      {selectedObj?.meshData.uvs && (
+        <div className={styles.uvSection}>
+          <div className={styles.uvHeader} onClick={() => setUvCollapsed(c => !c)}>
+            <span>UV Layout</span>
+            <span>{uvCollapsed ? '▲' : '▼'}</span>
+          </div>
+          {!uvCollapsed && (
+            <UVViewer
+              meshData={selectedObj.meshData}
+              selectedVertexIndices={editorMode === 'vertex' ? selectedVertexIndices : []}
+              selectedFaceIndex={editorMode === 'face' && selectedFaceIndices.length === 1 ? selectedFaceIndices[0] : null}
+            />
+          )}
+        </div>
+      )}
     </div>
   )
 }
