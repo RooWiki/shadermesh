@@ -23,6 +23,21 @@ export function projectUVs(
 ): Float32Array {
   const vertCount = positions.length / 3
   const uvs = new Float32Array(vertCount * 2)
+
+  if (projection === 'radial') {
+    let maxR = 0
+    for (let i = 0; i < vertCount; i++) {
+      const x = positions[i * 3], z = positions[i * 3 + 2]
+      maxR = Math.max(maxR, Math.sqrt(x * x + z * z))
+    }
+    if (maxR === 0) maxR = 1
+    for (let i = 0; i < vertCount; i++) {
+      uvs[i * 2]     = positions[i * 3]     / maxR * 0.5 + 0.5
+      uvs[i * 2 + 1] = positions[i * 3 + 2] / maxR * 0.5 + 0.5
+    }
+    return uvs
+  }
+
   for (let i = 0; i < vertCount; i++) {
     const x = positions[i * 3], y = positions[i * 3 + 1], z = positions[i * 3 + 2]
     let u = 0, v = 0
@@ -47,12 +62,6 @@ export function projectUVs(
         if (nx >= ny && nx >= nz) { u = z; v = y }
         else if (ny >= nx && ny >= nz) { u = x; v = z }
         else { u = x; v = y }
-        break
-      }
-      case 'radial': {
-        const r2 = Math.sqrt(x * x + z * z) || 1
-        u = x / r2 * 0.5 + 0.5
-        v = z / r2 * 0.5 + 0.5
         break
       }
     }
