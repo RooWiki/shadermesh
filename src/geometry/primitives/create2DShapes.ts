@@ -531,9 +531,9 @@ export function createCurvedLine(p: CurvedLineParams = {}): MeshData {
   for (let i = 0; i <= seg; i++) {
     const t = i / seg
     const x = (t - 0.5) * length
-    const z = curvature * Math.sin(t * Math.PI)
+    const z = -curvature * Math.sin(t * Math.PI)
     const dx = length / seg
-    const dz = curvature * Math.PI * Math.cos(t * Math.PI) * (1 / seg)
+    const dz = -curvature * Math.PI * Math.cos(t * Math.PI) * (1 / seg)
     const len = Math.sqrt(dx * dx + dz * dz) || 1
     const nx = dz / len, nz = -dx / len
     outer.push([x + nx * width / 2, z + nz * width / 2])
