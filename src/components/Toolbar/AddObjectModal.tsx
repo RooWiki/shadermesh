@@ -75,7 +75,7 @@ const CATEGORY_LABELS: Record<Category2D, string> = {
 const CATEGORIES: Category2D[] = ['curved', 'triangles', 'quads', 'regular', 'decorative', 'lines']
 
 export function AddObjectModal({ onClose }: AddObjectModalProps) {
-  const [tab, setTab] = useState<Tab>('3d')
+  const [tab, setTab] = useState<Tab>('2d')
 
   // 3D state
   const [type, setType] = useState<PrimitiveType>('cube')
@@ -384,8 +384,8 @@ export function AddObjectModal({ onClose }: AddObjectModalProps) {
 
         {/* Main tabs */}
         <div className={styles.tabRow}>
-          <button className={`${styles.tabBtn} ${tab === '3d' ? styles.tabBtnActive : ''}`} onClick={() => setTab('3d')}>3D Primitives</button>
           <button className={`${styles.tabBtn} ${tab === '2d' ? styles.tabBtnActive : ''}`} onClick={() => setTab('2d')}>2D Shapes</button>
+          <button className={`${styles.tabBtn} ${tab === '3d' ? styles.tabBtnActive : ''}`} onClick={() => setTab('3d')}>3D Primitives</button>
         </div>
 
         {/* Two-column layout: preview left, controls right */}
