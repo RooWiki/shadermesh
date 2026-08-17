@@ -291,7 +291,7 @@ export function AddObjectModal({ onClose }: AddObjectModalProps) {
             case 'zigzag':      return { width: zzW, height: zzH, zigzags: zzSegs, thickness: zzT, smoothness: zzSmooth }
           }
         })()
-        return createShape2D(shape2D, p2)
+        return createShape2D(shape2D, p2 as never)
       }
       switch (type) {
         case 'plane':    return createPlane({ width: planeW, height: planeH, subdivisionsX: planeSX, subdivisionsY: planeSY })

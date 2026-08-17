@@ -79,7 +79,7 @@ export class SceneManager {
   private gridHelper: THREE.GridHelper
 
   private meshMap = new Map<string, THREE.Mesh>()
-  private meshMatMap = new Map<string, THREE.MeshLambertMaterial>()
+  private meshMatMap = new Map<string, THREE.MeshPhongMaterial>()
   private wireframeMap = new Map<string, THREE.LineSegments>()
   private meshDataRefMap = new Map<string, MeshData>()
 
@@ -495,7 +495,7 @@ export class SceneManager {
         const raycaster = new THREE.Raycaster()
         raycaster.setFromCamera(this.getNDC(e), this.getActiveCamera())
         const hits = raycaster.intersectObject(mesh, false)
-        if (hits.length > 0 && hits[0].faceIndex !== undefined) {
+        if (hits.length > 0 && hits[0].faceIndex != null) {
           const idx = hits[0].faceIndex
           if (e.shiftKey) {
             const cur = this.selectedFaceIndices
