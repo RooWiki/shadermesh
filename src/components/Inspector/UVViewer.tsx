@@ -1,6 +1,5 @@
 import { useEffect, useRef } from 'react'
 import type { MeshData } from '../../core/MeshData'
-import styles from './Inspector.module.css'
 
 interface Props {
   meshData: MeshData
@@ -125,14 +124,11 @@ export function UVViewer({ meshData, selectedVertexIndices, selectedFaceIndex }:
   if (!meshData.uvs) return null
 
   return (
-    <div className={styles.uvViewer}>
-      <div className={styles.sectionTitle}>UV Layout</div>
-      <canvas
-        ref={canvasRef}
-        width={CANVAS_SIZE}
-        height={CANVAS_SIZE}
-        className={styles.uvCanvas}
-      />
-    </div>
+    <canvas
+      ref={canvasRef}
+      width={CANVAS_SIZE}
+      height={CANVAS_SIZE}
+      style={{ display: 'block', width: '100%', height: 'auto', aspectRatio: '1' }}
+    />
   )
 }

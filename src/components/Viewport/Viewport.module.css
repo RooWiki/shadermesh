@@ -101,3 +101,41 @@
   padding: 2px 6px;
   border-radius: 3px;
 }
+
+/* UV Layout floating panel */
+.uvPanel {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  width: 200px;
+  background: #13131c;
+  border: 1px solid #2e2e44;
+  border-radius: 6px;
+  overflow: hidden;
+  z-index: 10;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+}
+
+.uvPanelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: #6a6a88;
+  background: #1a1a28;
+  cursor: pointer;
+  user-select: none;
+  border-bottom: 1px solid #2a2a3a;
+}
+
+.uvPanelHeader:hover {
+  color: #9090b8;
+}
+
+.uvPanelToggle {
+  font-size: 8px;
+  color: #4a4a66;
+}

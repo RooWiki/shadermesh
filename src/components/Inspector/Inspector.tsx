@@ -5,7 +5,6 @@ import { MeshDataPanel } from './MeshDataPanel'
 import { PrimitiveParamsPanel } from './PrimitiveParamsPanel'
 import { VertexPanel, VertexGroupPanel } from './VertexPanel'
 import { FacePanel, FaceGroupPanel } from './FacePanel'
-import { UVViewer } from './UVViewer'
 import { exportOBJ } from '../../io/exportOBJ'
 import { exportJSON } from '../../io/exportJSON'
 import { downloadText } from '../../io/fileUtils'
@@ -134,14 +133,6 @@ export function Inspector() {
 
           {editorMode === 'face' && selectedFaceIndices.length === 1 && (
             <FacePanel objectId={obj.id} faceIndex={selectedFaceIndices[0]} />
-          )}
-
-          {obj.meshData.uvs && (
-            <UVViewer
-              meshData={obj.meshData}
-              selectedVertexIndices={editorMode === 'vertex' ? selectedVertexIndices : []}
-              selectedFaceIndex={editorMode === 'face' && selectedFaceIndices.length === 1 ? selectedFaceIndices[0] : null}
-            />
           )}
 
           <div className={styles.spacer} />
