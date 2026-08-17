@@ -40,7 +40,7 @@ export function Toolbar() {
   const importObject = useSceneStore(s => s.importObject)
   const activeTool = useSceneStore(s => s.activeTool)
   const setActiveTool = useSceneStore(s => s.setActiveTool)
-  const [showAddModal, setShowAddModal] = useState(false)
+  const [showAddModal, setShowAddModal] = useState(true)
 
   const handleImport = async () => {
     try {
