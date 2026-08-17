@@ -2,7 +2,8 @@
 
 A browser-based mesh editor for Technical Artists to inspect and edit 3D mesh data before applying shaders.
 
-<img width="1196" height="927" alt="ShaderMesh editor" src="https://github.com/user-attachments/assets/6d6d4dba-2910-4654-aaa9-c96fd091e57a" />
+<img width="2560" height="1440" alt="2026-08-16_22-57-21" src="https://github.com/user-attachments/assets/eb469a50-2aa9-4d09-b0c0-bca549b68db7" />
+
 
 ## What is ShaderMesh?
 
