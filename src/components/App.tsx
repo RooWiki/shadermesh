@@ -9,7 +9,7 @@ import styles from './App.module.css'
 const MIN_PANEL_WIDTH = 160
 const MAX_PANEL_WIDTH = 520
 const DEFAULT_RIGHT_WIDTH = 280
-const DEFAULT_LEFT_WIDTH = 200
+const DEFAULT_LEFT_WIDTH = 280
 
 function useGlobalShortcuts() {
   const setEditorMode = useSceneStore(s => s.setEditorMode)
