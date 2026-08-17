@@ -73,6 +73,75 @@ export function projectUVs(
 }
 
 /**
+ * Seam fix via vertex duplication for any projection whose U coordinate is
+ * atan2-based (cylindrical, spherical). Detects triangles whose U span > 0.5
+ * and duplicates the minority-side vertex with U ± 1 so the GPU interpolates
+ * across a tiny gap instead of the full [0,1] width.
+ */
+export function projectUVsWithSeamFix(
+  positions: Float32Array,
+  normals: Float32Array | undefined,
+  indices: Uint32Array,
+  projection: Exclude<UVProjectionType, 'shape_default' | 'radial' | 'disc'>,
+): {
+  uvs: Float32Array
+  positions: Float32Array
+  normals: Float32Array | undefined
+  indices: Uint32Array
+  extraVertexSources: number[]
+} {
+  const baseUVs = projectUVs(positions, normals, projection)
+
+  // Only atan2-based projections have a U seam
+  if (projection !== 'cylindrical' && projection !== 'spherical') {
+    return { uvs: baseUVs, positions, normals, indices, extraVertexSources: [] }
+  }
+
+  const posArr: number[] = Array.from(positions)
+  const nrmArr: number[] | null = normals ? Array.from(normals) : null
+  const uvArr: number[] = Array.from(baseUVs)
+  const idxArr: number[] = Array.from(indices)
+  const extraVertexSources: number[] = []
+  const hiDup = new Map<number, number>()
+  const loDup = new Map<number, number>()
+
+  const triCount = indices.length / 3
+  for (let t = 0; t < triCount; t++) {
+    const i0 = indices[t * 3], i1 = indices[t * 3 + 1], i2 = indices[t * 3 + 2]
+    const u0 = baseUVs[i0 * 2], u1 = baseUVs[i1 * 2], u2 = baseUVs[i2 * 2]
+    if (Math.max(u0, u1, u2) - Math.min(u0, u1, u2) <= 0.5) continue
+
+    const h = [u0 > 0.5, u1 > 0.5, u2 > 0.5]
+    const highCount = h.filter(Boolean).length
+    const makeHigh = highCount >= 2
+    const verts = [i0, i1, i2]
+
+    for (let k = 0; k < 3; k++) {
+      if (!(makeHigh ? !h[k] : h[k])) continue
+      const origIdx = verts[k]
+      const map = makeHigh ? hiDup : loDup
+      if (!map.has(origIdx)) {
+        const newIdx = posArr.length / 3
+        posArr.push(positions[origIdx * 3], positions[origIdx * 3 + 1], positions[origIdx * 3 + 2])
+        if (nrmArr && normals) nrmArr.push(normals[origIdx * 3], normals[origIdx * 3 + 1], normals[origIdx * 3 + 2])
+        uvArr.push(baseUVs[origIdx * 2] + (makeHigh ? 1 : -1), baseUVs[origIdx * 2 + 1])
+        extraVertexSources.push(origIdx)
+        map.set(origIdx, newIdx)
+      }
+      idxArr[t * 3 + k] = map.get(origIdx)!
+    }
+  }
+
+  return {
+    uvs: new Float32Array(uvArr),
+    positions: new Float32Array(posArr),
+    normals: nrmArr ? new Float32Array(nrmArr) : undefined,
+    indices: new Uint32Array(idxArr),
+    extraVertexSources,
+  }
+}
+
+/**
  * Radial (polar) UV projection: U = angle [0,1], V = distance from center [0,1].
  *
  * Two fixes applied via vertex duplication:

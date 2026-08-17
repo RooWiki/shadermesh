@@ -3,7 +3,7 @@ import { subscribeWithSelector } from 'zustand/middleware'
 import type { MeshObject, Transform, PrimitiveSource } from '../core/MeshObject'
 import { createMeshObject } from '../core/MeshObject'
 import type { UVMapConfig } from '../geometry/uvProjection'
-import { projectUVs, projectRadialUVsWithSeamFix, applyUVTransforms } from '../geometry/uvProjection'
+import { projectUVs, projectUVsWithSeamFix, projectRadialUVsWithSeamFix, applyUVTransforms } from '../geometry/uvProjection'
 import { createPlane, createCube, createSphere, createCylinder, createCone, createTorus, createCapsule, createShape2D } from '../geometry/primitives'
 import type { CylinderParams, ConeParams, TorusParams, CapsuleParams, Shape2DType, Shape2DParams } from '../geometry/primitives'
 import { recalculateFlatNormals, recalculateSmoothNormals } from '../geometry/normals'
@@ -313,26 +313,20 @@ export const useSceneStore = create<SceneState>()(
             return { ...o, meshData: { ...o.meshData, uvs: applyUVTransforms(baseUVs, config) }, uvMap: config }
           }
 
-          if (config.projection === 'radial') {
+          if (config.projection === 'radial' || config.projection === 'cylindrical' || config.projection === 'spherical') {
             // Always use fresh base mesh to avoid accumulating seam-fix vertices across calls
             const baseMesh = o.sourceParams ? generateMeshFromSource(o.sourceParams) : o.meshData
-            const r = projectRadialUVsWithSeamFix(baseMesh.positions, baseMesh.normals, baseMesh.indices)
-            // Extend tangents/colors for the duplicated vertices if present
-            let tangents = baseMesh.tangents
-            if (tangents) {
-              const ext = new Float32Array(tangents.length + r.extraVertexSources.length * 4)
-              ext.set(tangents)
+            const r = config.projection === 'radial'
+              ? projectRadialUVsWithSeamFix(baseMesh.positions, baseMesh.normals, baseMesh.indices)
+              : projectUVsWithSeamFix(baseMesh.positions, baseMesh.normals, baseMesh.indices, config.projection)
+            // Extend tangents/colors for duplicated vertices
+            const extendAttr = (arr: Float32Array | undefined, stride: number) => {
+              if (!arr) return undefined
+              const ext = new Float32Array(arr.length + r.extraVertexSources.length * stride)
+              ext.set(arr)
               r.extraVertexSources.forEach((src, i) =>
-                ext.set(tangents!.subarray(src * 4, src * 4 + 4), tangents!.length + i * 4))
-              tangents = ext
-            }
-            let colors = baseMesh.colors
-            if (colors) {
-              const ext = new Float32Array(colors.length + r.extraVertexSources.length * 4)
-              ext.set(colors)
-              r.extraVertexSources.forEach((src, i) =>
-                ext.set(colors!.subarray(src * 4, src * 4 + 4), colors!.length + i * 4))
-              colors = ext
+                ext.set(arr.subarray(src * stride, src * stride + stride), arr.length + i * stride))
+              return ext
             }
             return {
               ...o,
@@ -341,8 +335,8 @@ export const useSceneStore = create<SceneState>()(
                 normals: r.normals,
                 uvs: applyUVTransforms(r.uvs, config),
                 indices: r.indices,
-                tangents,
-                colors,
+                tangents: extendAttr(baseMesh.tangents, 4),
+                colors: extendAttr(baseMesh.colors, 4),
               },
               uvMap: config,
             }
