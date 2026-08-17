@@ -9,7 +9,7 @@ import type { Shape2DType } from '../../geometry/primitives'
 import { PrimitivePreview } from './PrimitivePreview'
 import styles from './AddObjectModal.module.css'
 
-type PrimitiveType = 'plane' | 'cube' | 'sphere' | 'cylinder' | 'cone' | 'torus' | 'capsule'
+type PrimitiveType = 'cube' | 'sphere' | 'cylinder' | 'cone' | 'torus' | 'capsule'
 type Tab = '3d' | '2d'
 type Category2D = 'curved' | 'triangles' | 'quads' | 'regular' | 'decorative' | 'lines'
 
@@ -78,7 +78,7 @@ export function AddObjectModal({ onClose }: AddObjectModalProps) {
   const [tab, setTab] = useState<Tab>('3d')
 
   // 3D state
-  const [type, setType] = useState<PrimitiveType>('plane')
+  const [type, setType] = useState<PrimitiveType>('cube')
   const [planeW, setPlaneW] = useState(1)
   const [planeH, setPlaneH] = useState(1)
   const [planeSX, setPlaneSX] = useState(1)
@@ -294,7 +294,6 @@ export function AddObjectModal({ onClose }: AddObjectModalProps) {
         return createShape2D(shape2D, p2 as never)
       }
       switch (type) {
-        case 'plane':    return createPlane({ width: planeW, height: planeH, subdivisionsX: planeSX, subdivisionsY: planeSY })
         case 'cube':     return createCube({ width: cubeW, height: cubeH, depth: cubeD })
         case 'sphere':   return createSphere({ radius: sphereR, widthSegments: sphereWS, heightSegments: sphereHS })
         case 'cylinder': return createCylinder({ radiusTop: cylRT, radiusBottom: cylRB, height: cylH, radialSegments: cylRS, heightSegments: cylHS, rise: cylRise })
@@ -334,8 +333,7 @@ export function AddObjectModal({ onClose }: AddObjectModalProps) {
   const handleAdd = () => {
     let id: string
     if (tab === '3d') {
-      if      (type === 'plane')    id = addPlane({ width: planeW, height: planeH, subdivisionsX: planeSX, subdivisionsY: planeSY })
-      else if (type === 'cube')     id = addCube({ width: cubeW, height: cubeH, depth: cubeD })
+      if      (type === 'cube')     id = addCube({ width: cubeW, height: cubeH, depth: cubeD })
       else if (type === 'sphere')   id = addSphere({ radius: sphereR, widthSegments: sphereWS, heightSegments: sphereHS })
       else if (type === 'cylinder') id = addCylinder({ radiusTop: cylRT, radiusBottom: cylRB, height: cylH, radialSegments: cylRS, heightSegments: cylHS, rise: cylRise })
       else if (type === 'cone')     id = addCone({ radius: coneR, height: coneH, radialSegments: coneRS, rise: coneRise })
@@ -369,9 +367,9 @@ export function AddObjectModal({ onClose }: AddObjectModalProps) {
     </label>
   )
 
-  const TYPES: PrimitiveType[] = ['plane', 'cube', 'sphere', 'cylinder', 'cone', 'torus', 'capsule']
+  const TYPES: PrimitiveType[] = ['cube', 'sphere', 'cylinder', 'cone', 'torus', 'capsule']
   const LABELS: Record<PrimitiveType, string> = {
-    plane: 'Plane', cube: 'Cube', sphere: 'Sphere',
+    cube: 'Cube', sphere: 'Sphere',
     cylinder: 'Cylinder', cone: 'Cone', torus: 'Torus', capsule: 'Capsule',
   }
 
@@ -412,15 +410,6 @@ export function AddObjectModal({ onClose }: AddObjectModalProps) {
                 </div>
 
                 <div className={styles.fields}>
-                  {type === 'plane' && (
-                    <>
-                      {field('Width', planeW, setPlaneW)}
-                      {field('Height', planeH, setPlaneH)}
-                      {intField('Subdivisions X', planeSX, setPlaneSX)}
-                      {intField('Subdivisions Y', planeSY, setPlaneSY)}
-                      <div className={styles.hint}>{(planeSX + 1) * (planeSY + 1)} verts · {planeSX * planeSY * 2} tris</div>
-                    </>
-                  )}
                   {type === 'cube' && (
                     <>
                       {field('Width', cubeW, setCubeW)}
