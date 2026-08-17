@@ -32,8 +32,9 @@ export function projectUVs(
     }
     if (maxR === 0) maxR = 1
     for (let i = 0; i < vertCount; i++) {
-      uvs[i * 2]     = positions[i * 3]     / maxR * 0.5 + 0.5
-      uvs[i * 2 + 1] = positions[i * 3 + 2] / maxR * 0.5 + 0.5
+      const x = positions[i * 3], z = positions[i * 3 + 2]
+      uvs[i * 2]     = Math.atan2(z, x) / (2 * Math.PI) + 0.5
+      uvs[i * 2 + 1] = Math.sqrt(x * x + z * z) / maxR
     }
     return uvs
   }
