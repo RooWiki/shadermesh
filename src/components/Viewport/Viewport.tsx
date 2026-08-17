@@ -23,6 +23,7 @@ export function Viewport() {
   const showNormals = useSceneStore(s => s.showNormals)
   const showTangents = useSceneStore(s => s.showTangents)
   const showVertexColors = useSceneStore(s => s.showVertexColors)
+  const showUVChecker = useSceneStore(s => s.showUVChecker)
 
   const [dragBox, setDragBox] = useState<{ x: number; y: number; w: number; h: number } | null>(null)
   const [maximizedPanel, setMaximizedPanel] = useState<ViewportId | null>(null)
@@ -91,6 +92,10 @@ export function Viewport() {
   useEffect(() => {
     sceneManagerRef.current?.setShowVertexColors(showVertexColors)
   }, [showVertexColors])
+
+  useEffect(() => {
+    sceneManagerRef.current?.setShowUVChecker(showUVChecker)
+  }, [showUVChecker])
 
   // F key shortcut
   useEffect(() => {

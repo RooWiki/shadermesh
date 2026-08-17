@@ -107,6 +107,8 @@ interface SceneState {
   toggleNormals: () => void
   toggleTangents: () => void
   toggleVertexColors: () => void
+  showUVChecker: boolean
+  toggleUVChecker: () => void
 
   // Notify viewport that mesh geometry changed without pushing history
   notifyMeshChanged: (objectId: string) => void
@@ -128,6 +130,7 @@ export const useSceneStore = create<SceneState>()(
     showNormals: false,
     showTangents: false,
     showVertexColors: false,
+    showUVChecker: false,
     hoveredObjectId: null,
     activeTool: 'select' as ActiveTool,
     undoStack: [],
@@ -444,6 +447,7 @@ export const useSceneStore = create<SceneState>()(
     toggleNormals: () => set(s => ({ showNormals: !s.showNormals })),
     toggleTangents: () => set(s => ({ showTangents: !s.showTangents })),
     toggleVertexColors: () => set(s => ({ showVertexColors: !s.showVertexColors })),
+    toggleUVChecker: () => set(s => ({ showUVChecker: !s.showUVChecker })),
 
     notifyMeshChanged: (objectId) => {
       set(s => ({

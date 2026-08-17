@@ -23,26 +23,31 @@ export function createCube(params: CubeParams = {}): MeshData {
   type FaceDef = {
     pos: [number, number, number][]
     normal: [number, number, number]
+    dimU: number
+    dimV: number
   }
 
   const faces: FaceDef[] = [
-    // +Y top
-    { normal: [0, 1, 0],  pos: [[-hw, hh, hd], [hw, hh, hd], [hw, hh, -hd], [-hw, hh, -hd]] },
-    // -Y bottom
-    { normal: [0, -1, 0], pos: [[-hw, -hh, -hd], [hw, -hh, -hd], [hw, -hh, hd], [-hw, -hh, hd]] },
-    // +Z front
-    { normal: [0, 0, 1],  pos: [[-hw, -hh, hd], [hw, -hh, hd], [hw, hh, hd], [-hw, hh, hd]] },
-    // -Z back
-    { normal: [0, 0, -1], pos: [[hw, -hh, -hd], [-hw, -hh, -hd], [-hw, hh, -hd], [hw, hh, -hd]] },
-    // +X right
-    { normal: [1, 0, 0],  pos: [[hw, -hh, hd], [hw, -hh, -hd], [hw, hh, -hd], [hw, hh, hd]] },
-    // -X left
-    { normal: [-1, 0, 0], pos: [[-hw, -hh, -hd], [-hw, -hh, hd], [-hw, hh, hd], [-hw, hh, -hd]] },
+    // +Y top      — U along X (width), V along Z (depth)
+    { normal: [0, 1, 0],  pos: [[-hw, hh, hd], [hw, hh, hd], [hw, hh, -hd], [-hw, hh, -hd]], dimU: width,  dimV: depth  },
+    // -Y bottom   — U along X (width), V along Z (depth)
+    { normal: [0, -1, 0], pos: [[-hw, -hh, -hd], [hw, -hh, -hd], [hw, -hh, hd], [-hw, -hh, hd]], dimU: width,  dimV: depth  },
+    // +Z front    — U along X (width), V along Y (height)
+    { normal: [0, 0, 1],  pos: [[-hw, -hh, hd], [hw, -hh, hd], [hw, hh, hd], [-hw, hh, hd]], dimU: width,  dimV: height },
+    // -Z back     — U along X (width), V along Y (height)
+    { normal: [0, 0, -1], pos: [[hw, -hh, -hd], [-hw, -hh, -hd], [-hw, hh, -hd], [hw, hh, -hd]], dimU: width,  dimV: height },
+    // +X right    — U along Z (depth), V along Y (height)
+    { normal: [1, 0, 0],  pos: [[hw, -hh, hd], [hw, -hh, -hd], [hw, hh, -hd], [hw, hh, hd]], dimU: depth,  dimV: height },
+    // -X left     — U along Z (depth), V along Y (height)
+    { normal: [-1, 0, 0], pos: [[-hw, -hh, -hd], [-hw, -hh, hd], [-hw, hh, hd], [-hw, hh, -hd]], dimU: depth,  dimV: height },
   ]
 
-  const faceUVs: [number, number][] = [[0, 0], [1, 0], [1, 1], [0, 1]]
-
   faces.forEach((face, f) => {
+    const maxFaceDim = Math.max(face.dimU, face.dimV)
+    const uMax = face.dimU / maxFaceDim
+    const vMax = face.dimV / maxFaceDim
+    const faceUVs: [number, number][] = [[0, 0], [uMax, 0], [uMax, vMax], [0, vMax]]
+
     const base = f * 4
     face.pos.forEach(([x, y, z], v) => {
       const vi = (base + v) * 3

@@ -16,6 +16,10 @@ function buildFilled(pts: Pt[]): MeshData {
     if (z < minZ) minZ = z; if (z > maxZ) maxZ = z
   }
   const rX = maxX - minX || 1, rZ = maxZ - minZ || 1
+  // Normalize by the larger dimension to preserve aspect ratio; center in UV space
+  const rMax = Math.max(rX, rZ)
+  const uOff = (rMax - rX) * 0.5 / rMax
+  const vOff = (rMax - rZ) * 0.5 / rMax
 
   const vertCount = n + 1
   const positions = new Float32Array(vertCount * 3)
@@ -25,14 +29,16 @@ function buildFilled(pts: Pt[]): MeshData {
 
   positions[0] = cx; positions[1] = 0; positions[2] = cz
   normals[1] = 1
-  uvs[0] = (cx - minX) / rX; uvs[1] = 1 - (cz - minZ) / rZ
+  uvs[0] = uOff + (cx - minX) / rMax
+  uvs[1] = 1 - (vOff + (cz - minZ) / rMax)
 
   for (let i = 0; i < n; i++) {
     const [x, z] = pts[i]
     const v3 = (i + 1) * 3, v2 = (i + 1) * 2
     positions[v3] = x; positions[v3 + 1] = 0; positions[v3 + 2] = z
     normals[v3 + 1] = 1
-    uvs[v2] = (x - minX) / rX; uvs[v2 + 1] = 1 - (z - minZ) / rZ
+    uvs[v2]     = uOff + (x - minX) / rMax
+    uvs[v2 + 1] = 1 - (vOff + (z - minZ) / rMax)
     const ii = i * 3
     indices[ii] = 0; indices[ii + 1] = (i + 1) % n + 1; indices[ii + 2] = i + 1
   }
@@ -40,7 +46,7 @@ function buildFilled(pts: Pt[]): MeshData {
   return { positions, normals, uvs, indices }
 }
 
-// Ring strip — outer CCW, inner CCW (same winding direction)
+// Ring strip — outer CCW from above (+Y normal)
 // outerY / innerY: optional per-vertex Y values; when provided, normals are omitted so Three.js computes them
 function buildRingStrip(outer: Pt[], inner: Pt[], closed = true, outerY?: number[], innerY?: number[]): MeshData {
   const n = outer.length
@@ -52,8 +58,22 @@ function buildRingStrip(outer: Pt[], inner: Pt[], closed = true, outerY?: number
   const hasY = outerY != null || innerY != null
   const normals = hasY ? undefined : new Float32Array(vertCount * 3)
 
+  // Arc-length U parameterization along the outer edge
+  const arcLens: number[] = [0]
+  for (let i = 1; i < n; i++) {
+    const dx = outer[i][0] - outer[i - 1][0]
+    const dz = outer[i][1] - outer[i - 1][1]
+    arcLens.push(arcLens[i - 1] + Math.sqrt(dx * dx + dz * dz))
+  }
+  const closingDx = outer[0][0] - outer[n - 1][0]
+  const closingDz = outer[0][1] - outer[n - 1][1]
+  const totalArc = closed
+    ? arcLens[n - 1] + Math.sqrt(closingDx * closingDx + closingDz * closingDz)
+    : arcLens[n - 1]
+  const invArc = totalArc > 0 ? 1 / totalArc : 1
+
   for (let i = 0; i < n; i++) {
-    const t = closed ? i / n : i / (n - 1)
+    const t = arcLens[i] * invArc
     const o3 = i * 3, o2 = i * 2, i3 = (n + i) * 3, i2 = (n + i) * 2
     const oy = outerY?.[i] ?? 0
     const iy = innerY?.[i] ?? 0
@@ -68,8 +88,8 @@ function buildRingStrip(outer: Pt[], inner: Pt[], closed = true, outerY?: number
   for (let i = 0; i < segs; i++) {
     const next = (i + 1) % n
     const ii = i * 6
-    indices[ii] = i; indices[ii + 1] = next; indices[ii + 2] = n + i
-    indices[ii + 3] = next; indices[ii + 4] = n + next; indices[ii + 5] = n + i
+    indices[ii] = i; indices[ii + 1] = n + i; indices[ii + 2] = next
+    indices[ii + 3] = next; indices[ii + 4] = n + i; indices[ii + 5] = n + next
   }
 
   return normals ? { positions, normals, uvs, indices } : { positions, uvs, indices }
@@ -95,7 +115,7 @@ function circlePoints(r: number, seg: number, start = 0, end = Math.PI * 2): Pt[
   const range = end - start
   for (let i = 0; i < seg; i++) {
     const a = start + (i / seg) * range
-    pts.push([r * Math.cos(a), -r * Math.sin(a)])
+    pts.push([r * Math.cos(a), r * Math.sin(a)])
   }
   return pts
 }
@@ -104,7 +124,7 @@ function arcPoints(r: number, seg: number, start: number, end: number): Pt[] {
   const pts: Pt[] = []
   for (let i = 0; i <= seg; i++) {
     const a = start + (i / seg) * (end - start)
-    pts.push([r * Math.cos(a), -r * Math.sin(a)])
+    pts.push([r * Math.cos(a), r * Math.sin(a)])
   }
   return pts
 }
@@ -124,7 +144,7 @@ export function createEllipse(p: EllipseParams = {}): MeshData {
   const pts: Pt[] = []
   for (let i = 0; i < seg; i++) {
     const a = (i / seg) * Math.PI * 2
-    pts.push([radiusX * Math.cos(a), -radiusZ * Math.sin(a)])
+    pts.push([radiusX * Math.cos(a), radiusZ * Math.sin(a)])
   }
   return buildFilled(pts)
 }
@@ -140,12 +160,12 @@ export function createOval(p: OvalParams = {}): MeshData {
   // Right semicircle
   for (let i = 0; i <= seg; i++) {
     const a = -Math.PI / 2 + (i / seg) * Math.PI
-    pts.push([hw + r * Math.cos(a), -r * Math.sin(a)])
+    pts.push([hw + r * Math.cos(a), r * Math.sin(a)])
   }
   // Left semicircle
   for (let i = 0; i <= seg; i++) {
     const a = Math.PI / 2 + (i / seg) * Math.PI
-    pts.push([-hw + r * Math.cos(a), -r * Math.sin(a)])
+    pts.push([-hw + r * Math.cos(a), r * Math.sin(a)])
   }
   return buildFilled(pts)
 }
@@ -157,7 +177,7 @@ export function createSemicircle(p: SemicircleParams = {}): MeshData {
   const pts: Pt[] = []
   for (let i = 0; i <= seg; i++) {
     const a = (i / seg) * Math.PI
-    pts.push([radius * Math.cos(a), -radius * Math.sin(a)])
+    pts.push([radius * Math.cos(a), radius * Math.sin(a)])
   }
   // close with center point handled by buildFilled (uses centroid), but we want flat base
   // so push the two endpoints to close the shape
@@ -186,8 +206,8 @@ export function createRing(p: RingParams = {}): MeshData {
   const outer: Pt[] = [], inner: Pt[] = [], yVals: number[] = []
   for (let i = 0; i <= seg; i++) {
     const a = (i / seg) * Math.PI * 2
-    outer.push([outerRadius * Math.cos(a), -outerRadius * Math.sin(a)])
-    inner.push([innerRadius * Math.cos(a), -innerRadius * Math.sin(a)])
+    outer.push([outerRadius * Math.cos(a), outerRadius * Math.sin(a)])
+    inner.push([innerRadius * Math.cos(a), innerRadius * Math.sin(a)])
     yVals.push((i / seg) * rise)
   }
   return buildRingStrip(outer, inner, false, yVals, yVals)
@@ -239,21 +259,21 @@ export function createCrescent(p: CrescentParams = {}): MeshData {
   const a0inner = Math.PI - halfAngleB
   const a1inner = Math.PI + halfAngleB
 
-  // Build outer arc (from a0outer to a1outer going CCW, i.e., decreasing angle wrapping around)
+  // Build outer arc (from a0outer to a1outer going CCW)
   const outerArcPts: Pt[] = []
   const nOuter = Math.round(seg * (Math.PI * 2 - 2 * halfAngle) / (Math.PI * 2))
   for (let i = 0; i <= nOuter; i++) {
     const a = a0outer + (i / nOuter) * (Math.PI * 2 - 2 * halfAngle)
-    outerArcPts.push([R * Math.cos(a), -R * Math.sin(a)])
+    outerArcPts.push([R * Math.cos(a), R * Math.sin(a)])
   }
 
-  // Build inner arc (from a1inner to a0inner going in opposite sense, i.e., going from the right intersection back)
+  // Build inner arc (from a1inner to a0inner)
   const innerArcPts: Pt[] = []
   const nInner = Math.round(seg * 2 * halfAngleB / (Math.PI * 2))
   const innerRange = -2 * halfAngleB
   for (let i = 0; i <= nInner; i++) {
     const a = a1inner + (i / nInner) * innerRange
-    innerArcPts.push([d + r * Math.cos(a), -r * Math.sin(a)])
+    innerArcPts.push([d + r * Math.cos(a), r * Math.sin(a)])
   }
 
   const pts = [...outerArcPts, ...innerArcPts]
@@ -271,8 +291,8 @@ export function createSpiral(p: SpiralParams = {}): MeshData {
     const t = i / seg
     const angle = t * turns * Math.PI * 2
     const r = innerRadius + (outerRadius - innerRadius) * t
-    outer.push([r * Math.cos(angle), -r * Math.sin(angle)])
-    inner.push([(r - width) * Math.cos(angle), -(r - width) * Math.sin(angle)])
+    outer.push([r * Math.cos(angle), r * Math.sin(angle)])
+    inner.push([(r - width) * Math.cos(angle), (r - width) * Math.sin(angle)])
     yVals?.push(t * turns * rise)
   }
 
@@ -281,40 +301,47 @@ export function createSpiral(p: SpiralParams = {}): MeshData {
 
 // --- Triangles ---
 
-export interface TriangleParams { base?: number; height?: number }
-export function createTriangle(p: TriangleParams = {}): MeshData {
-  const { base = 1, height = 1 } = p
-  const hb = base / 2
-  const pts: Pt[] = [[-hb, height / 2], [hb, height / 2], [0, -height / 2]]
-  return buildFilled(pts)
-}
-
 export interface EquilateralTriangleParams { side?: number }
 export function createEquilateralTriangle(p: EquilateralTriangleParams = {}): MeshData {
   const { side = 1 } = p
   const h = (side * Math.sqrt(3)) / 2
-  const r = h / 3  // centroid from base
-  const pts: Pt[] = [[-side / 2, r], [side / 2, r], [0, -(h - r)]]
-  return buildFilled(pts)
+  const r = h / 3
+  return buildFilled([[-side / 2, -r], [side / 2, -r], [0, h - r]])
 }
 
 export interface IsoscelesTriangleParams { base?: number; height?: number }
 export function createIsoscelesTriangle(p: IsoscelesTriangleParams = {}): MeshData {
-  return createTriangle(p)
+  const { base = 1, height = 1 } = p
+  const hb = base / 2, hh = height / 2
+  return buildFilled([[-hb, -hh], [hb, -hh], [0, hh]])
 }
 
 export interface ScaleneTriangleParams { base?: number; height?: number; offset?: number }
 export function createScaleneTriangle(p: ScaleneTriangleParams = {}): MeshData {
   const { base = 1, height = 0.8, offset = 0.3 } = p
-  const hb = base / 2
-  const pts: Pt[] = [[-hb, height / 2], [hb, height / 2], [-hb + offset, -height / 2]]
-  return buildFilled(pts)
+  const hb = base / 2, hh = height / 2
+  return buildFilled([[-hb, -hh], [hb, -hh], [-hb + offset, hh]])
 }
 
-export interface ElongatedTriangleParams { base?: number; height?: number }
-export function createElongatedTriangle(p: ElongatedTriangleParams = {}): MeshData {
-  const { base = 0.2, height = 2 } = p
-  return createTriangle({ base, height })
+export interface AcuteTriangleParams { base?: number; height?: number }
+export function createAcuteTriangle(p: AcuteTriangleParams = {}): MeshData {
+  const { base = 1, height = 0.9 } = p
+  const hb = base / 2, hh = height / 2
+  return buildFilled([[-hb, -hh], [hb, -hh], [base * 0.12, hh]])
+}
+
+export interface RightTriangleParams { leg1?: number; leg2?: number }
+export function createRightTriangle(p: RightTriangleParams = {}): MeshData {
+  const { leg1 = 0.8, leg2 = 0.6 } = p
+  const cx = leg1 / 3, cz = leg2 / 3
+  return buildFilled([[-cx, -cz], [leg1 - cx, -cz], [-cx, leg2 - cz]])
+}
+
+export interface ObtuseTriangleParams { base?: number; height?: number }
+export function createObtuseTriangle(p: ObtuseTriangleParams = {}): MeshData {
+  const { base = 1, height = 0.5 } = p
+  const hb = base / 2, hh = height / 2
+  return buildFilled([[-hb, -hh], [hb, -hh], [-hb - base * 0.3, hh]])
 }
 
 // --- Quads ---
@@ -394,7 +421,7 @@ export function createIrregularPolygon(p: IrregularPolygonParams = {}): MeshData
   for (let i = 0; i < n; i++) {
     const a = (i / n) * Math.PI * 2
     const r = radius * (1 - irregularity / 2 + rand() * irregularity)
-    pts.push([r * Math.cos(a), -r * Math.sin(a)])
+    pts.push([r * Math.cos(a), r * Math.sin(a)])
   }
   return buildFilled(pts)
 }
@@ -409,7 +436,7 @@ export function createStar(p: StarParams = {}): MeshData {
   for (let i = 0; i < n * 2; i++) {
     const a = (i / (n * 2)) * Math.PI * 2
     const r = i % 2 === 0 ? outerRadius : innerRadius
-    pts.push([r * Math.cos(a), -r * Math.sin(a)])
+    pts.push([r * Math.cos(a), r * Math.sin(a)])
   }
   return buildFilled(pts)
 }
@@ -441,11 +468,15 @@ export function createArrow(p: ArrowParams = {}): MeshData {
     if (z < minZ) minZ = z; if (z > maxZ) maxZ = z
   }
   const rX = maxX - minX || 1, rZ = maxZ - minZ || 1
+  const rMax = Math.max(rX, rZ)
+  const uOff = (rMax - rX) * 0.5 / rMax
+  const vOff = (rMax - rZ) * 0.5 / rMax
   for (let i = 0; i < n; i++) {
     const [x, z] = v[i]
     positions[i * 3] = x; positions[i * 3 + 2] = z
     normals[i * 3 + 1] = 1
-    uvs[i * 2] = (x - minX) / rX; uvs[i * 2 + 1] = 1 - (z - minZ) / rZ
+    uvs[i * 2]     = uOff + (x - minX) / rMax
+    uvs[i * 2 + 1] = 1 - (vOff + (z - minZ) / rMax)
   }
   const indices = new Uint32Array([
     0, 6, 5,  // shaft top half
@@ -462,8 +493,8 @@ export function createWedge(p: WedgeParams = {}): MeshData {
   const { width = 1, depth = 0.6, thickness = 0.15 } = p
   const hw = width / 2, hd = depth / 2
   // Right-pointing chevron ">" as an open ring strip
-  const outer: Pt[] = [[-hw, hd], [hw, 0], [-hw, -hd]]
-  const inner: Pt[] = [[-hw, hd - thickness], [hw - thickness, 0], [-hw, -hd + thickness]]
+  const outer: Pt[] = [[-hw, -hd], [hw, 0], [-hw, hd]]
+  const inner: Pt[] = [[-hw, -hd + thickness], [hw - thickness, 0], [-hw, hd - thickness]]
   return buildRingStrip(outer, inner, false)
 }
 
@@ -478,8 +509,8 @@ export function createRibbon(p: RibbonParams = {}): MeshData {
   const leftPts: Pt[] = [], rightPts: Pt[] = []
   for (let i = 0; i < seg; i++) {
     const a = (i / seg) * Math.PI * 2
-    leftPts.push([-cx + rx * Math.cos(a), -rz * Math.sin(a)])
-    rightPts.push([cx + rx * Math.cos(a), -rz * Math.sin(a)])
+    leftPts.push([-cx + rx * Math.cos(a), rz * Math.sin(a)])
+    rightPts.push([cx + rx * Math.cos(a), rz * Math.sin(a)])
   }
   return mergeMeshData(buildFilled(leftPts), buildFilled(rightPts))
 }
@@ -508,7 +539,7 @@ export function createCurvedLine(p: CurvedLineParams = {}): MeshData {
     outer.push([x + nx * width / 2, z + nz * width / 2])
     inner.push([x - nx * width / 2, z - nz * width / 2])
   }
-  return buildRingStrip(outer, inner, false)
+  return buildRingStrip(inner, outer, false)
 }
 
 export interface BrokenLineParams { length1?: number; length2?: number; angle?: number; width?: number }
@@ -518,40 +549,76 @@ export function createBrokenLine(p: BrokenLineParams = {}): MeshData {
   const hw = width / 2
   const seg1Start: Pt = [-length1, 0]
   const joint: Pt = [0, 0]
-  const seg2End: Pt = [length2 * Math.cos(a), -length2 * Math.sin(a)]
+  const seg2End: Pt = [length2 * Math.cos(a), length2 * Math.sin(a)]
 
   // Build two rectangular segments joined at the origin
   const perp1: Pt[] = [
     [seg1Start[0], -hw], [joint[0], -hw],
     [joint[0], hw], [seg1Start[0], hw]
   ]
-  const cos2 = Math.cos(a), sin2 = -Math.sin(a)
+  const cos2 = Math.cos(a), sin2 = Math.sin(a)
   const perp2: Pt[] = [
-    [joint[0], -hw], [seg2End[0] - sin2 * hw, seg2End[1] - cos2 * hw],
-    [seg2End[0] + sin2 * hw, seg2End[1] + cos2 * hw], [joint[0], hw]
+    [joint[0], -hw], [seg2End[0] + sin2 * hw, seg2End[1] - cos2 * hw],
+    [seg2End[0] - sin2 * hw, seg2End[1] + cos2 * hw], [joint[0], hw]
   ]
 
   return mergeMeshData(buildFilled(perp1), buildFilled(perp2))
 }
 
-export interface ZigzagParams { width?: number; height?: number; zigzags?: number; thickness?: number }
+export interface ZigzagParams { width?: number; height?: number; zigzags?: number; thickness?: number; smoothness?: number }
 export function createZigzag(p: ZigzagParams = {}): MeshData {
-  const { width = 0.3, height = 1, zigzags = 4, thickness = 0.06 } = p
-  const seg = zigzags * 2
-  const outer: Pt[] = [], inner: Pt[] = []
-  for (let i = 0; i <= seg; i++) {
-    const t = i / seg
-    const z = (t - 0.5) * height
-    const x = (i % 2 === 0 ? -width / 2 : width / 2)
-    const nextX = i < seg ? (i % 2 === 0 ? width / 2 : -width / 2) : x
-    const nextZ = i < seg ? ((i + 1) / seg - 0.5) * height : z
-    const dx = nextX - x, dz = nextZ - z
-    const len = Math.sqrt(dx * dx + dz * dz) || 1
-    const nx = dz / len * thickness / 2, nz = -dx / len * thickness / 2
-    outer.push([x + nx, z + nz])
-    inner.push([x - nx, z - nz])
+  const { width = 0.3, height = 1, zigzags = 4, thickness = 0.06, smoothness = 0 } = p
+  const hw = thickness / 2
+  const s = Math.max(0, Math.min(1, smoothness))
+  // More sub-samples per half-period as smoothness increases
+  const segsPerHalf = Math.max(1, Math.round(s * 16))
+  const totalSegs = zigzags * 2 * segsPerHalf
+
+  // Centerline: blend between triangle wave (sharp) and cosine wave (smooth)
+  const pts: Pt[] = []
+  for (let i = 0; i <= totalSegs; i++) {
+    const t = i / totalSegs
+    const phase = t * zigzags * 2
+    const frac = phase % 1
+    const evenSeg = Math.floor(phase) % 2 === 0
+    const sharpX = evenSeg ? -width / 2 + frac * width : width / 2 - frac * width
+    const smoothX = -(width / 2) * Math.cos(t * zigzags * 2 * Math.PI)
+    pts.push([sharpX * (1 - s) + smoothX * s, (t - 0.5) * height])
   }
-  return buildRingStrip(outer, inner, false)
+
+  const outer: Pt[] = [], inner: Pt[] = []
+  const n = pts.length
+  for (let i = 0; i < n; i++) {
+    const [cx, cz] = pts[i]
+    let px1 = 0, pz1 = 0
+    if (i > 0) {
+      const dx = pts[i][0] - pts[i - 1][0], dz = pts[i][1] - pts[i - 1][1]
+      const len = Math.sqrt(dx * dx + dz * dz) || 1
+      px1 = -dz / len; pz1 = dx / len
+    }
+    let px2 = 0, pz2 = 0
+    if (i < n - 1) {
+      const dx = pts[i + 1][0] - pts[i][0], dz = pts[i + 1][1] - pts[i][1]
+      const len = Math.sqrt(dx * dx + dz * dz) || 1
+      px2 = -dz / len; pz2 = dx / len
+    }
+    let mx: number, mz: number, scale: number
+    if (i === 0) {
+      mx = px2; mz = pz2; scale = hw
+    } else if (i === n - 1) {
+      mx = px1; mz = pz1; scale = hw
+    } else {
+      const bx = px1 + px2, bz = pz1 + pz2
+      const bl = Math.sqrt(bx * bx + bz * bz) || 1
+      mx = bx / bl; mz = bz / bl
+      const dot = mx * px1 + mz * pz1
+      scale = hw / Math.max(0.25, dot)
+    }
+    outer.push([cx + mx * scale, cz + mz * scale])
+    inner.push([cx - mx * scale, cz - mz * scale])
+  }
+
+  return buildRingStrip(inner, outer, false)
 }
 
 // --- Type map for dispatch ---
@@ -559,7 +626,7 @@ export function createZigzag(p: ZigzagParams = {}): MeshData {
 export type Shape2DType =
   | 'circle' | 'ellipse' | 'oval' | 'semicircle' | 'arc'
   | 'ring' | 'sector' | 'segment' | 'crown' | 'crescent' | 'spiral'
-  | 'triangle' | 'equilateral' | 'isosceles' | 'scalene' | 'elongated'
+  | 'equilateral' | 'isosceles' | 'scalene' | 'acute' | 'right' | 'obtuse'
   | 'rectangle' | 'square' | 'rhombus' | 'rhomboid' | 'trapezoid' | 'parallelogram' | 'kite'
   | 'pentagon' | 'hexagon' | 'heptagon' | 'octagon' | 'irregular'
   | 'star' | 'arrow' | 'wedge' | 'ribbon'
@@ -570,7 +637,7 @@ export type Shape2DParams = Record<string, number>
 const DISPLAY_NAMES: Record<Shape2DType, string> = {
   circle: 'Circle', ellipse: 'Ellipse', oval: 'Oval', semicircle: 'Semicircle', arc: 'Arc',
   ring: 'Ring', sector: 'Sector', segment: 'Segment', crown: 'Crown', crescent: 'Crescent', spiral: 'Spiral',
-  triangle: 'Triangle', equilateral: 'Equilateral', isosceles: 'Isosceles', scalene: 'Scalene', elongated: 'Elongated',
+  equilateral: 'Equilateral', isosceles: 'Isosceles', scalene: 'Scalene', acute: 'Acute', right: 'Right', obtuse: 'Obtuse',
   rectangle: 'Rectangle', square: 'Square', rhombus: 'Rhombus', rhomboid: 'Rhomboid',
   trapezoid: 'Trapezoid', parallelogram: 'Parallelogram', kite: 'Kite',
   pentagon: 'Pentagon', hexagon: 'Hexagon', heptagon: 'Heptagon', octagon: 'Octagon', irregular: 'Irregular',
@@ -595,11 +662,12 @@ export function createShape2D(type: Shape2DType, params: Shape2DParams = {}): Me
     case 'crown':       return createCrown(params)
     case 'crescent':    return createCrescent(params)
     case 'spiral':      return createSpiral(params)
-    case 'triangle':    return createTriangle(params)
     case 'equilateral': return createEquilateralTriangle(params)
     case 'isosceles':   return createIsoscelesTriangle(params)
     case 'scalene':     return createScaleneTriangle(params)
-    case 'elongated':   return createElongatedTriangle(params)
+    case 'acute':       return createAcuteTriangle(params)
+    case 'right':       return createRightTriangle(params)
+    case 'obtuse':      return createObtuseTriangle(params)
     case 'rectangle':   return createRectangle(params)
     case 'square':      return createSquare(params)
     case 'rhombus':     return createRhombus(params)

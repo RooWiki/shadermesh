@@ -32,6 +32,18 @@ export function createCapsule(params: CapsuleParams = {}): MeshData {
 
   const totalRows = 2 * hs + 2
 
+  // Arc-length V parameterization: proportional to surface distance from top pole
+  const topHemiArc = (Math.PI / 2) * radius
+  const cylArc     = height
+  const botHemiArc = (Math.PI / 2) * radius
+  const totalArc   = topHemiArc + cylArc + botHemiArc
+
+  function rowArcLen(i: number): number {
+    if (i <= hs) return (i / hs) * topHemiArc
+    if (i === hs + 1) return topHemiArc + cylArc
+    return topHemiArc + cylArc + ((i - hs - 1) / hs) * botHemiArc
+  }
+
   for (let i = 0; i < totalRows; i++) {
     let r: number, y: number, nR: number, nY: number
 
@@ -57,7 +69,7 @@ export function createCapsule(params: CapsuleParams = {}): MeshData {
       nY = cosPhi
     }
 
-    const v = i / (totalRows - 1)
+    const v = 1 - rowArcLen(i) / totalArc
     for (let x = 0; x <= rs; x++) {
       const theta = (x / rs) * Math.PI * 2
       const cosT = Math.cos(theta), sinT = Math.sin(theta)

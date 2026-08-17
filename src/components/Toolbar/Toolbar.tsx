@@ -35,6 +35,8 @@ export function Toolbar() {
   const toggleTangents = useSceneStore(s => s.toggleTangents)
   const showVertexColors = useSceneStore(s => s.showVertexColors)
   const toggleVertexColors = useSceneStore(s => s.toggleVertexColors)
+  const showUVChecker = useSceneStore(s => s.showUVChecker)
+  const toggleUVChecker = useSceneStore(s => s.toggleUVChecker)
   const importObject = useSceneStore(s => s.importObject)
   const activeTool = useSceneStore(s => s.activeTool)
   const setActiveTool = useSceneStore(s => s.setActiveTool)
@@ -107,6 +109,14 @@ export function Toolbar() {
           title="Toggle vertex color display (unlit)"
         >
           ◈ VColors
+        </button>
+
+        <button
+          className={`${styles.wfBtn} ${showUVChecker ? styles.wfBtnActive : ''}`}
+          onClick={toggleUVChecker}
+          title="Toggle UV checker texture"
+        >
+          ▦ UV
         </button>
 
         <div className={styles.divider} />

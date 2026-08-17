@@ -26,6 +26,10 @@ export function createPlane(params: PlaneParams = {}): MeshData {
 
   const halfW = width / 2
   const halfH = height / 2
+  // Scale UVs proportionally so a square checker stays square on any aspect ratio
+  const maxDim = Math.max(width, height)
+  const uScale = width / maxDim
+  const vScale = height / maxDim
 
   for (let y = 0; y < vertexCountY; y++) {
     const v = y / segY
@@ -41,8 +45,8 @@ export function createPlane(params: PlaneParams = {}): MeshData {
       normals[i * 3 + 1] = 1
       normals[i * 3 + 2] = 0
 
-      uvs[i * 2 + 0] = u
-      uvs[i * 2 + 1] = 1 - v
+      uvs[i * 2 + 0] = u * uScale
+      uvs[i * 2 + 1] = (1 - v) * vScale
     }
   }
 

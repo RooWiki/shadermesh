@@ -19,6 +19,44 @@ const VERTEX_COLOR_DEFAULT = [0.35, 0.55, 0.95] as const
 const VERTEX_COLOR_SELECTED = [1.0, 0.85, 0.1] as const
 const ORTHO_SIZE = 5  // frustum half-height at zoom=1
 
+function makeUVCheckerTexture(): THREE.CanvasTexture {
+  const size = 512
+  const cells = 8
+  const cell = size / cells
+  const canvas = document.createElement('canvas')
+  canvas.width = size
+  canvas.height = size
+  const ctx = canvas.getContext('2d')!
+  const colors = ['#00bbcc','#cc2222','#cccc00','#22cc44','#cc22cc','#aaaaaa','#7722cc','#ffffff']
+  const dark = [false, true, false, false, false, false, true, false]
+  for (let row = 0; row < cells; row++) {
+    for (let col = 0; col < cells; col++) {
+      const idx = (row + col) % cells
+      const x = col * cell
+      const y = row * cell
+      ctx.fillStyle = colors[idx]
+      ctx.fillRect(x, y, cell, cell)
+      ctx.strokeStyle = 'rgba(0,0,0,0.25)'
+      ctx.lineWidth = 1
+      ctx.strokeRect(x + 0.5, y + 0.5, cell - 1, cell - 1)
+      ctx.font = `bold ${cell * 0.48}px sans-serif`
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      const cx = x + cell / 2
+      const cy = y + cell / 2
+      ctx.lineWidth = cell * 0.1
+      ctx.strokeStyle = dark[idx] ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)'
+      ctx.strokeText(String(idx + 1), cx, cy)
+      ctx.fillStyle = dark[idx] ? '#ffffff' : '#111111'
+      ctx.fillText(String(idx + 1), cx, cy)
+    }
+  }
+  const tex = new THREE.CanvasTexture(canvas)
+  tex.wrapS = THREE.RepeatWrapping
+  tex.wrapT = THREE.RepeatWrapping
+  return tex
+}
+
 export class SceneManager {
   private scene: THREE.Scene
   private renderer: THREE.WebGLRenderer
@@ -89,6 +127,9 @@ export class SceneManager {
   private defaultMat: THREE.MeshPhongMaterial
   private selectedMat: THREE.MeshPhongMaterial
   private vcMat: THREE.MeshBasicMaterial
+  private uvCheckerTex!: THREE.CanvasTexture
+  private uvCheckerMat!: THREE.MeshBasicMaterial
+  private showUVChecker = false
   private wireframeMat: THREE.LineBasicMaterial
   private selectedWireframeMat: THREE.LineBasicMaterial
   private faceHighlightMat: THREE.MeshBasicMaterial
@@ -169,6 +210,8 @@ export class SceneManager {
     this.defaultMat = new THREE.MeshPhongMaterial({ color: 0x5a7cba, shininess: 18, specular: 0x223355 })
     this.selectedMat = new THREE.MeshPhongMaterial({ color: 0x7aace0, emissive: 0x112233, emissiveIntensity: 0.3, shininess: 18, specular: 0x334466 })
     this.vcMat = new THREE.MeshBasicMaterial({ vertexColors: true })
+    this.uvCheckerTex = makeUVCheckerTexture()
+    this.uvCheckerMat = new THREE.MeshBasicMaterial({ map: this.uvCheckerTex, side: THREE.DoubleSide })
     this.wireframeMat = new THREE.LineBasicMaterial({ color: 0x2244aa, transparent: true, opacity: 0.4 })
     this.selectedWireframeMat = new THREE.LineBasicMaterial({ color: 0xf0a050, transparent: true, opacity: 0.8 })
     this.faceHighlightMat = new THREE.MeshBasicMaterial({
@@ -657,9 +700,22 @@ export class SceneManager {
     this.showVertexColors = show
     for (const obj of this.currentObjects) {
       const mesh = this.meshMap.get(obj.id)
-      const mat = this.meshMatMap.get(obj.id)
-      if (mesh && mat) mesh.material = (show && obj.meshData.colors) ? this.vcMat : mat
+      if (mesh) mesh.material = this.resolveMat(obj.id, obj.meshData)
     }
+  }
+
+  setShowUVChecker(show: boolean) {
+    this.showUVChecker = show
+    for (const obj of this.currentObjects) {
+      const mesh = this.meshMap.get(obj.id)
+      if (mesh) mesh.material = this.resolveMat(obj.id, obj.meshData)
+    }
+  }
+
+  private resolveMat(objId: string, meshData: MeshData): THREE.Material {
+    if (this.showUVChecker) return this.uvCheckerMat
+    if (this.showVertexColors && meshData.colors) return this.vcMat
+    return this.meshMatMap.get(objId)!
   }
 
   setShowNormals(show: boolean) {
@@ -714,8 +770,7 @@ export class SceneManager {
     const geometry = meshDataToBufferGeometry(obj.meshData)
     const mat = this.defaultMat.clone()
     this.meshMatMap.set(obj.id, mat)
-    const activeMat = (this.showVertexColors && obj.meshData.colors) ? this.vcMat : mat
-    const mesh = new THREE.Mesh(geometry, activeMat)
+    const mesh = new THREE.Mesh(geometry, this.resolveMat(obj.id, obj.meshData))
     mesh.castShadow = true
     mesh.receiveShadow = true
     this.applyTransform(mesh, obj)
@@ -736,8 +791,7 @@ export class SceneManager {
     mesh.geometry.dispose()
     mesh.geometry = meshDataToBufferGeometry(obj.meshData)
 
-    const mat = this.meshMatMap.get(obj.id)
-    if (mat) mesh.material = (this.showVertexColors && obj.meshData.colors) ? this.vcMat : mat
+    mesh.material = this.resolveMat(obj.id, obj.meshData)
 
     const oldWf = this.wireframeMap.get(obj.id)
     if (oldWf) { mesh.remove(oldWf); oldWf.geometry.dispose() }
@@ -782,7 +836,7 @@ export class SceneManager {
       const prevObj = this.currentObjects.find(o => o.id === this.selectedId)
       if (prevMat && prevMesh) {
         prevMat.copy(this.defaultMat)
-        if (!(this.showVertexColors && prevObj?.meshData.colors)) prevMesh.material = prevMat
+        prevMesh.material = prevObj ? this.resolveMat(this.selectedId, prevObj.meshData) : prevMat
         const wf = this.wireframeMap.get(this.selectedId)
         if (wf) (wf.material as THREE.LineBasicMaterial).copy(this.wireframeMat)
       }
@@ -801,7 +855,7 @@ export class SceneManager {
       const obj = this.currentObjects.find(o => o.id === id)
       if (mesh && meshMat) {
         meshMat.copy(this.selectedMat)
-        if (!(this.showVertexColors && obj?.meshData.colors)) mesh.material = meshMat
+        if (obj) mesh.material = this.resolveMat(id, obj.meshData)
         const wf = this.wireframeMap.get(id)
         if (wf) (wf.material as THREE.LineBasicMaterial).copy(this.selectedWireframeMat)
       }
@@ -1233,6 +1287,8 @@ export class SceneManager {
     this.topControls.dispose()
     this.frontControls.dispose()
     this.rightControls.dispose()
+    this.uvCheckerMat.dispose()
+    this.uvCheckerTex.dispose()
     this.renderer.dispose()
     this.container.removeChild(this.renderer.domElement)
   }

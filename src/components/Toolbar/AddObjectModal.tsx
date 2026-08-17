@@ -30,11 +30,12 @@ const SHAPES_BY_CATEGORY: Record<Category2D, { type: Shape2DType; label: string 
     { type: 'spiral',    label: 'Spiral' },
   ],
   triangles: [
-    { type: 'triangle',    label: 'Triangle' },
     { type: 'equilateral', label: 'Equilateral' },
     { type: 'isosceles',   label: 'Isosceles' },
     { type: 'scalene',     label: 'Scalene' },
-    { type: 'elongated',   label: 'Elongated' },
+    { type: 'acute',       label: 'Acute' },
+    { type: 'right',       label: 'Right' },
+    { type: 'obtuse',      label: 'Obtuse' },
   ],
   quads: [
     { type: 'rectangle',    label: 'Rectangle' },
@@ -136,14 +137,18 @@ export function AddObjectModal({ onClose }: AddObjectModalProps) {
   const [spiralWidth, setSpiralWidth] = useState(0.04)
   const [spiralRise, setSpiralRise] = useState(0)
   // triangle variants
-  const [triBase, setTriBase] = useState(1)
-  const [triHeight, setTriHeight] = useState(1)
   const [triSide, setTriSide] = useState(1)
+  const [isoBase, setIsoBase] = useState(1)
+  const [isoHeight, setIsoHeight] = useState(1)
+  const [scaBase, setScaBase] = useState(1)
+  const [scaHeight, setScaHeight] = useState(0.8)
   const [scaleOffset, setScaleOffset] = useState(0.3)
-  const [isoBase, setIsoBase] = useState(1.2)
-  const [isoHeight, setIsoHeight] = useState(0.8)
-  const [eloBase, setEloBase] = useState(0.2)
-  const [eloHeight, setEloHeight] = useState(2)
+  const [acuteBase, setAcuteBase] = useState(1)
+  const [acuteHeight, setAcuteHeight] = useState(0.9)
+  const [rightLeg1, setRightLeg1] = useState(0.8)
+  const [rightLeg2, setRightLeg2] = useState(0.6)
+  const [obtuseBase, setObtuseBase] = useState(1)
+  const [obtuseHeight, setObtuseHeight] = useState(0.5)
   // quads
   const [rectW, setRectW] = useState(1)
   const [rectH, setRectH] = useState(0.5)
@@ -186,6 +191,7 @@ export function AddObjectModal({ onClose }: AddObjectModalProps) {
   const [zzH, setZzH] = useState(1)
   const [zzSegs, setZzSegs] = useState(4)
   const [zzT, setZzT] = useState(0.06)
+  const [zzSmooth, setZzSmooth] = useState(0)
 
   const [objectName, setObjectName] = useState('')
 
@@ -212,11 +218,12 @@ export function AddObjectModal({ onClose }: AddObjectModalProps) {
       case 'crown':       return { innerRadius, outerRadius, segments, rise: ringRise }
       case 'crescent':    return { outerRadius: cresOuterR, innerRadius: cresInnerR, offset: cresOffset, segments }
       case 'spiral':      return { innerRadius: spiralInner, outerRadius: spiralOuter, turns: spiralTurns, width: spiralWidth, segments, rise: spiralRise }
-      case 'triangle':    return { base: triBase, height: triHeight }
       case 'equilateral': return { side: triSide }
       case 'isosceles':   return { base: isoBase, height: isoHeight }
-      case 'scalene':     return { base: triBase, height: triHeight, offset: scaleOffset }
-      case 'elongated':   return { base: eloBase, height: eloHeight }
+      case 'scalene':     return { base: scaBase, height: scaHeight, offset: scaleOffset }
+      case 'acute':       return { base: acuteBase, height: acuteHeight }
+      case 'right':       return { leg1: rightLeg1, leg2: rightLeg2 }
+      case 'obtuse':      return { base: obtuseBase, height: obtuseHeight }
       case 'rectangle':   return { width: rectW, height: rectH }
       case 'square':      return { size: squareSize }
       case 'rhombus':     return { diagonalH: rhDiagH, diagonalV: rhDiagV }
@@ -236,7 +243,7 @@ export function AddObjectModal({ onClose }: AddObjectModalProps) {
       case 'straight':    return { length: lineLen, width: lineW }
       case 'curved':      return { length: lineLen, curvature, width: lineW }
       case 'broken':      return { length1: brokenL1, length2: brokenL2, angle: brokenAngle, width: lineW }
-      case 'zigzag':      return { width: zzW, height: zzH, zigzags: zzSegs, thickness: zzT }
+      case 'zigzag':      return { width: zzW, height: zzH, zigzags: zzSegs, thickness: zzT, smoothness: zzSmooth }
     }
   }
 
@@ -256,11 +263,12 @@ export function AddObjectModal({ onClose }: AddObjectModalProps) {
             case 'crown':       return { innerRadius, outerRadius, segments, rise: ringRise }
             case 'crescent':    return { outerRadius: cresOuterR, innerRadius: cresInnerR, offset: cresOffset, segments }
             case 'spiral':      return { innerRadius: spiralInner, outerRadius: spiralOuter, turns: spiralTurns, width: spiralWidth, segments, rise: spiralRise }
-            case 'triangle':    return { base: triBase, height: triHeight }
-            case 'isosceles':   return { base: isoBase, height: isoHeight }
-            case 'elongated':   return { base: eloBase, height: eloHeight }
             case 'equilateral': return { side: triSide }
-            case 'scalene':     return { base: triBase, height: triHeight, offset: scaleOffset }
+            case 'isosceles':   return { base: isoBase, height: isoHeight }
+            case 'scalene':     return { base: scaBase, height: scaHeight, offset: scaleOffset }
+            case 'acute':       return { base: acuteBase, height: acuteHeight }
+            case 'right':       return { leg1: rightLeg1, leg2: rightLeg2 }
+            case 'obtuse':      return { base: obtuseBase, height: obtuseHeight }
             case 'rectangle':   return { width: rectW, height: rectH }
             case 'rhomboid':
             case 'parallelogram': return { width: rectW, height: rectH, skew }
@@ -280,7 +288,7 @@ export function AddObjectModal({ onClose }: AddObjectModalProps) {
             case 'straight':    return { length: lineLen, width: lineW }
             case 'curved':      return { length: lineLen, curvature, width: lineW }
             case 'broken':      return { length1: brokenL1, length2: brokenL2, angle: brokenAngle, width: lineW }
-            case 'zigzag':      return { width: zzW, height: zzH, zigzags: zzSegs, thickness: zzT }
+            case 'zigzag':      return { width: zzW, height: zzH, zigzags: zzSegs, thickness: zzT, smoothness: zzSmooth }
           }
         })()
         return createShape2D(shape2D, p2)
@@ -310,7 +318,7 @@ export function AddObjectModal({ onClose }: AddObjectModalProps) {
     innerRadius, outerRadius, startAngle, endAngle, arcRise, ringRise,
     cresOuterR, cresInnerR, cresOffset,
     spiralInner, spiralOuter, spiralTurns, spiralWidth, spiralRise,
-    triBase, triHeight, triSide, scaleOffset, isoBase, isoHeight, eloBase, eloHeight,
+    triSide, isoBase, isoHeight, scaBase, scaHeight, scaleOffset, acuteBase, acuteHeight, rightLeg1, rightLeg2, obtuseBase, obtuseHeight,
     rectW, rectH, squareSize, rhDiagH, rhDiagV, skew,
     trapTop, trapBot, trapH, kiteW, kiteTop, kiteBot,
     polyRadius, polySides, irregularity,
@@ -320,7 +328,7 @@ export function AddObjectModal({ onClose }: AddObjectModalProps) {
     ribW, ribH, ribT,
     lineLen, lineW, curvature,
     brokenL1, brokenL2, brokenAngle,
-    zzW, zzH, zzSegs, zzT,
+    zzW, zzH, zzSegs, zzT, zzSmooth,
   ])
 
   const handleAdd = () => {
@@ -506,11 +514,12 @@ export function AddObjectModal({ onClose }: AddObjectModalProps) {
                   {shape2D === 'segment' && (<>{field('Radius', radius, setRadius)}{angleField('Start Angle°', startAngle, setStartAngle)}{angleField('End Angle°', endAngle, setEndAngle)}{intField('Segments', segments, setSegments, 2)}</>)}
                   {shape2D === 'crescent' && (<>{field('Outer Radius', cresOuterR, setCresOuterR)}{field('Inner Radius', cresInnerR, setCresInnerR)}{field('Offset', cresOffset, setCresOffset)}{intField('Segments', segments, setSegments, 8)}</>)}
                   {shape2D === 'spiral' && (<>{field('Inner Radius', spiralInner, setSpiralInner)}{field('Outer Radius', spiralOuter, setSpiralOuter)}{field('Turns', spiralTurns, setSpiralTurns, 0.5, 1, 0.5)}{field('Width', spiralWidth, setSpiralWidth)}{intField('Segments', segments, setSegments, 4)}{field('Rise / Turn', spiralRise, setSpiralRise, 0.1, 3, -Infinity)}</>)}
-                  {shape2D === 'triangle' && (<>{field('Base', triBase, setTriBase)}{field('Height', triHeight, setTriHeight)}</>)}
-                  {shape2D === 'isosceles' && (<>{field('Base', isoBase, setIsoBase)}{field('Height', isoHeight, setIsoHeight)}</>)}
-                  {shape2D === 'elongated' && (<>{field('Base', eloBase, setEloBase)}{field('Height', eloHeight, setEloHeight)}</>)}
                   {shape2D === 'equilateral' && (<>{field('Side', triSide, setTriSide)}</>)}
-                  {shape2D === 'scalene' && (<>{field('Base', triBase, setTriBase)}{field('Height', triHeight, setTriHeight)}{field('Offset', scaleOffset, setScaleOffset, 0.1)}</>)}
+                  {shape2D === 'isosceles' && (<>{field('Base', isoBase, setIsoBase)}{field('Height', isoHeight, setIsoHeight)}</>)}
+                  {shape2D === 'scalene' && (<>{field('Base', scaBase, setScaBase)}{field('Height', scaHeight, setScaHeight)}{field('Offset', scaleOffset, setScaleOffset, 0.1)}</>)}
+                  {shape2D === 'acute' && (<>{field('Base', acuteBase, setAcuteBase)}{field('Height', acuteHeight, setAcuteHeight)}</>)}
+                  {shape2D === 'right' && (<>{field('Leg 1', rightLeg1, setRightLeg1)}{field('Leg 2', rightLeg2, setRightLeg2)}</>)}
+                  {shape2D === 'obtuse' && (<>{field('Base', obtuseBase, setObtuseBase)}{field('Height', obtuseHeight, setObtuseHeight)}</>)}
                   {(shape2D === 'rectangle' || shape2D === 'rhomboid' || shape2D === 'parallelogram') && (<>{field('Width', rectW, setRectW)}{field('Height', rectH, setRectH)}{shape2D !== 'rectangle' && field('Skew', skew, setSkew, 0.1)}</>)}
                   {shape2D === 'square' && (<>{field('Size', squareSize, setSquareSize)}</>)}
                   {shape2D === 'rhombus' && (<>{field('Diagonal H', rhDiagH, setRhDiagH)}{field('Diagonal V', rhDiagV, setRhDiagV)}</>)}
@@ -525,7 +534,7 @@ export function AddObjectModal({ onClose }: AddObjectModalProps) {
                   {shape2D === 'straight' && (<>{field('Length', lineLen, setLineLen)}{field('Width', lineW, setLineW)}</>)}
                   {shape2D === 'curved' && (<>{field('Length', lineLen, setLineLen)}{field('Curvature', curvature, setCurvature, 0.05)}{field('Width', lineW, setLineW)}</>)}
                   {shape2D === 'broken' && (<>{field('Length 1', brokenL1, setBrokenL1)}{field('Length 2', brokenL2, setBrokenL2)}{angleField('Angle°', brokenAngle, setBrokenAngle)}{field('Width', lineW, setLineW)}</>)}
-                  {shape2D === 'zigzag' && (<>{field('Width', zzW, setZzW)}{field('Height', zzH, setZzH)}{intField('Zigzags', zzSegs, setZzSegs, 1)}{field('Thickness', zzT, setZzT)}</>)}
+                  {shape2D === 'zigzag' && (<>{field('Width', zzW, setZzW)}{field('Height', zzH, setZzH)}{intField('Zigzags', zzSegs, setZzSegs, 1)}{field('Thickness', zzT, setZzT)}{field('Smoothness', zzSmooth, setZzSmooth, 0.05, 2, 0)}</>)}
                 </div>
               </>
             )}
