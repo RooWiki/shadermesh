@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { MeshData } from '../../core/MeshData'
 
 interface Props {
@@ -15,6 +15,13 @@ function getCSSVar(name: string): string {
 
 export function UVViewer({ meshData, selectedVertexIndices, selectedFaceIndex }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const [themeTick, setThemeTick] = useState(0)
+
+  useEffect(() => {
+    const obs = new MutationObserver(() => setThemeTick(t => t + 1))
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
+    return () => obs.disconnect()
+  }, [])
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -127,7 +134,7 @@ export function UVViewer({ meshData, selectedVertexIndices, selectedFaceIndex }:
       ctx.fillText(`${u.toFixed(3)}, ${v.toFixed(3)}`, pad, S - 6)
     }
 
-  }, [meshData, selectedVertexIndices, selectedFaceIndex])
+  }, [meshData, selectedVertexIndices, selectedFaceIndex, themeTick])
 
   if (!meshData.uvs) return null
 
