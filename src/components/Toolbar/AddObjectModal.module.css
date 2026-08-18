@@ -197,6 +197,8 @@
   font-size: 11px;
   color: #8080a0;
   flex: 1;
+  cursor: ew-resize;
+  user-select: none;
 }
 
 .input {

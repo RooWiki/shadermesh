@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useSceneStore } from '../../state/sceneStore'
 import { NumberInput } from '../Inspector/NumberInput'
+import { makeLabelDrag } from '../Inspector/labelDrag'
 import {
   createPlane, createCube, createSphere, createCylinder,
   createCone, createTorus, createCapsule, createShape2D,
@@ -348,21 +349,21 @@ export function AddObjectModal({ onClose }: AddObjectModalProps) {
 
   const field = (label: string, value: number, set: (n: number) => void, step = 0.1, decimals = 3, min = 0.001) => (
     <label className={styles.field}>
-      <span className={styles.fieldLabel}>{label}</span>
+      <span className={styles.fieldLabel} onMouseDown={makeLabelDrag(value, n => set(Math.max(min, n)), step, decimals)}>{label}</span>
       <NumberInput className={styles.input} value={value} step={step} decimals={decimals} onChange={n => set(Math.max(min, n))} />
     </label>
   )
 
   const intField = (label: string, value: number, set: (n: number) => void, min = 1) => (
     <label className={styles.field}>
-      <span className={styles.fieldLabel}>{label}</span>
+      <span className={styles.fieldLabel} onMouseDown={makeLabelDrag(value, n => set(Math.max(min, Math.round(n))), 1, 0)}>{label}</span>
       <NumberInput className={styles.input} value={value} step={1} decimals={0} onChange={n => set(Math.max(min, Math.round(n)))} />
     </label>
   )
 
   const angleField = (label: string, value: number, set: (n: number) => void) => (
     <label className={styles.field}>
-      <span className={styles.fieldLabel}>{label}</span>
+      <span className={styles.fieldLabel} onMouseDown={makeLabelDrag(value, set, 5, 1)}>{label}</span>
       <NumberInput className={styles.input} value={value} step={5} decimals={1} onChange={set} />
     </label>
   )
@@ -378,7 +379,7 @@ export function AddObjectModal({ onClose }: AddObjectModalProps) {
     : LABELS[type]
 
   return (
-    <div className={styles.overlay} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+    <div className={styles.overlay}>
       <div className={styles.modal}>
         <div className={styles.title}>Add Object</div>
 
