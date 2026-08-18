@@ -28,6 +28,9 @@ export interface MeshObject {
   visible: boolean
   sourceParams?: PrimitiveSource
   uvMap?: UVMapConfig
+  // Snapshot of meshData before seam-fix UV vertices were appended.
+  // Used as base for re-applying seam-fix projections so vertex edits are preserved.
+  uvBaseMesh?: MeshData
 }
 
 export function defaultTransform(): Transform {

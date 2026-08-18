@@ -36,6 +36,14 @@ function cloneObjects(objects: MeshObject[]): MeshObject[] {
     },
     sourceParams: o.sourceParams ? { ...o.sourceParams } as PrimitiveSource : undefined,
     uvMap: o.uvMap ? { ...o.uvMap } : undefined,
+    uvBaseMesh: o.uvBaseMesh ? {
+      positions: new Float32Array(o.uvBaseMesh.positions),
+      normals:   o.uvBaseMesh.normals  ? new Float32Array(o.uvBaseMesh.normals)  : undefined,
+      uvs:       o.uvBaseMesh.uvs      ? new Float32Array(o.uvBaseMesh.uvs)      : undefined,
+      tangents:  o.uvBaseMesh.tangents ? new Float32Array(o.uvBaseMesh.tangents) : undefined,
+      colors:    o.uvBaseMesh.colors   ? new Float32Array(o.uvBaseMesh.colors)   : undefined,
+      indices:   new Uint32Array(o.uvBaseMesh.indices),
+    } : undefined,
   }))
 }
 
@@ -321,17 +329,17 @@ export const useSceneStore = create<SceneState>()(
 
           if (config.projection === 'shape_default') {
             const baseUVs = o.sourceParams ? generateMeshFromSource(o.sourceParams).uvs : o.meshData.uvs
-            if (!baseUVs) return { ...o, uvMap: config }
-            return { ...o, meshData: { ...o.meshData, uvs: applyUVTransforms(baseUVs, config) }, uvMap: config }
+            if (!baseUVs) return { ...o, uvMap: config, uvBaseMesh: undefined }
+            return { ...o, meshData: { ...o.meshData, uvs: applyUVTransforms(baseUVs, config) }, uvMap: config, uvBaseMesh: undefined }
           }
 
           if (config.projection === 'radial' || config.projection === 'cylindrical' || config.projection === 'spherical') {
-            // Always use fresh base mesh to avoid accumulating seam-fix vertices across calls
-            const baseMesh = o.sourceParams ? generateMeshFromSource(o.sourceParams) : o.meshData
+            // Use stored pre-seam-fix base (preserves vertex edits) or current mesh on first application
+            const baseMesh = o.uvBaseMesh ?? o.meshData
             const r = config.projection === 'radial'
               ? projectRadialUVsWithSeamFix(baseMesh.positions, baseMesh.normals, baseMesh.indices)
               : projectUVsWithSeamFix(baseMesh.positions, baseMesh.normals, baseMesh.indices, config.projection)
-            // Extend tangents/colors for duplicated vertices
+            // Extend tangents/colors for duplicated seam vertices
             const extendAttr = (arr: Float32Array | undefined, stride: number) => {
               if (!arr) return undefined
               const ext = new Float32Array(arr.length + r.extraVertexSources.length * stride)
@@ -351,11 +359,12 @@ export const useSceneStore = create<SceneState>()(
                 colors: extendAttr(baseMesh.colors, 4),
               },
               uvMap: config,
+              uvBaseMesh: baseMesh,  // Remember base for next re-application
             }
           }
 
           const baseUVs = projectUVs(o.meshData.positions, o.meshData.normals, config.projection)
-          return { ...o, meshData: { ...o.meshData, uvs: applyUVTransforms(baseUVs, config) }, uvMap: config }
+          return { ...o, meshData: { ...o.meshData, uvs: applyUVTransforms(baseUVs, config) }, uvMap: config, uvBaseMesh: undefined }
         }),
       }))
     },
@@ -388,6 +397,12 @@ export const useSceneStore = create<SceneState>()(
           positions[index * 3] = position[0]
           positions[index * 3 + 1] = position[1]
           positions[index * 3 + 2] = position[2]
+          // Mirror edit to base mesh so seam-fix UV re-applications preserve vertex edits
+          if (o.uvBaseMesh && index * 3 + 2 < o.uvBaseMesh.positions.length) {
+            o.uvBaseMesh.positions[index * 3] = position[0]
+            o.uvBaseMesh.positions[index * 3 + 1] = position[1]
+            o.uvBaseMesh.positions[index * 3 + 2] = position[2]
+          }
           return { ...o, meshData: { ...o.meshData } }
         }),
       }))
