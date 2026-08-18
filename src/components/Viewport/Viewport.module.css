@@ -67,6 +67,12 @@
 .labelFront { top: calc(50% + 6px);  left: 8px; }
 .labelRight { top: calc(50% + 6px);  left: calc(50% + 8px); }
 
+.panelLabelMaximized {
+  top: 6px !important;
+  left: unset !important;
+  right: 8px;
+}
+
 /* Mode / tool indicator — bottom-left of top-left panel */
 .modeIndicator {
   position: absolute;

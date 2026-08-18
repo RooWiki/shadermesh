@@ -219,22 +219,22 @@ export function Viewport() {
 
       {/* Panel labels — double-click to maximize / restore */}
       {(!maximizedPanel || maximizedPanel === 'top') && (
-        <span className={`${styles.panelLabel} ${styles.labelTop}`} onDoubleClick={() => handleLabelDblClick('top')}>
+        <span className={`${styles.panelLabel} ${styles.labelTop} ${maximizedPanel === 'top' ? styles.panelLabelMaximized : ''}`} onDoubleClick={() => handleLabelDblClick('top')}>
           Top{maximizedPanel === 'top' ? ' ×' : ''}
         </span>
       )}
       {(!maximizedPanel || maximizedPanel === 'persp') && (
-        <span className={`${styles.panelLabel} ${styles.labelPersp}`} onDoubleClick={() => handleLabelDblClick('persp')}>
+        <span className={`${styles.panelLabel} ${styles.labelPersp} ${maximizedPanel === 'persp' ? styles.panelLabelMaximized : ''}`} onDoubleClick={() => handleLabelDblClick('persp')}>
           Persp{maximizedPanel === 'persp' ? ' ×' : ''}
         </span>
       )}
       {(!maximizedPanel || maximizedPanel === 'front') && (
-        <span className={`${styles.panelLabel} ${styles.labelFront}`} onDoubleClick={() => handleLabelDblClick('front')}>
+        <span className={`${styles.panelLabel} ${styles.labelFront} ${maximizedPanel === 'front' ? styles.panelLabelMaximized : ''}`} onDoubleClick={() => handleLabelDblClick('front')}>
           Front{maximizedPanel === 'front' ? ' ×' : ''}
         </span>
       )}
       {(!maximizedPanel || maximizedPanel === 'right') && (
-        <span className={`${styles.panelLabel} ${styles.labelRight}`} onDoubleClick={() => handleLabelDblClick('right')}>
+        <span className={`${styles.panelLabel} ${styles.labelRight} ${maximizedPanel === 'right' ? styles.panelLabelMaximized : ''}`} onDoubleClick={() => handleLabelDblClick('right')}>
           Right{maximizedPanel === 'right' ? ' ×' : ''}
         </span>
       )}
