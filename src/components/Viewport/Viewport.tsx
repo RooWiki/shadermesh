@@ -113,6 +113,13 @@ export function Viewport() {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
+  // Block browser context menu on Shift+Right Click globally
+  useEffect(() => {
+    const block = (e: MouseEvent) => { if (e.shiftKey && e.button === 2) e.preventDefault() }
+    window.addEventListener('contextmenu', block, { capture: true })
+    return () => window.removeEventListener('contextmenu', block, { capture: true })
+  }, [])
+
   // Right-click box-select in vertex/face mode — panel-aware NDC
   useEffect(() => {
     const el = containerRef.current
@@ -207,7 +214,6 @@ export function Viewport() {
 
     const onContext = (e: Event) => {
       if (editorMode === 'vertex' || editorMode === 'face') e.preventDefault()
-      if ((e as MouseEvent).shiftKey) e.preventDefault()
     }
 
     el.addEventListener('pointerdown', onDown, { capture: true })
