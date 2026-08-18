@@ -28,6 +28,10 @@ export function Viewport() {
   const [dragBox, setDragBox] = useState<{ x: number; y: number; w: number; h: number } | null>(null)
   const [maximizedPanel, setMaximizedPanel] = useState<ViewportId | null>(null)
 
+  // Ref so the box-select handler always has the current selection without stale closure
+  const selectionRef = useRef({ vertices: selectedVertexIndices, faces: selectedFaceIndices })
+  selectionRef.current = { vertices: selectedVertexIndices, faces: selectedFaceIndices }
+
   const handleLabelDblClick = (vp: ViewportId) => {
     const next = maximizedPanel === vp ? null : vp
     setMaximizedPanel(next)
@@ -118,6 +122,7 @@ export function Viewport() {
     let start: { x: number; y: number } | null = null
     let startPanel: PanelId = 'persp'
     let moved = false
+    let isShift = false
     let currentBox: { x: number; y: number; w: number; h: number } | null = null
 
     const getPanelFromPointer = (cx: number, cy: number, rect: DOMRect): PanelId => {
@@ -135,6 +140,7 @@ export function Viewport() {
       if (e.button !== 2 || (editorMode !== 'vertex' && editorMode !== 'face')) return
       e.preventDefault()
       e.stopPropagation()
+      isShift = e.shiftKey
       const rect = el.getBoundingClientRect()
       startPanel = getPanelFromPointer(e.clientX, e.clientY, rect)
       start = { x: e.clientX, y: e.clientY }
@@ -181,16 +187,27 @@ export function Viewport() {
       const p2 = toNDC(e.clientX, e.clientY)
 
       if (editorMode === 'vertex') {
-        const indices = sceneManagerRef.current?.getVerticesInBox(p1.x, p1.y, p2.x, p2.y) ?? []
-        selectVertices(indices)
+        const hit = sceneManagerRef.current?.getVerticesInBox(p1.x, p1.y, p2.x, p2.y) ?? []
+        if (isShift) {
+          const merged = Array.from(new Set([...selectionRef.current.vertices, ...hit]))
+          selectVertices(merged)
+        } else {
+          selectVertices(hit)
+        }
       } else {
-        const indices = sceneManagerRef.current?.getFacesInBox(p1.x, p1.y, p2.x, p2.y) ?? []
-        selectFaces(indices)
+        const hit = sceneManagerRef.current?.getFacesInBox(p1.x, p1.y, p2.x, p2.y) ?? []
+        if (isShift) {
+          const merged = Array.from(new Set([...selectionRef.current.faces, ...hit]))
+          selectFaces(merged)
+        } else {
+          selectFaces(hit)
+        }
       }
     }
 
     const onContext = (e: Event) => {
       if (editorMode === 'vertex' || editorMode === 'face') e.preventDefault()
+      if ((e as MouseEvent).shiftKey) e.preventDefault()
     }
 
     el.addEventListener('pointerdown', onDown, { capture: true })
