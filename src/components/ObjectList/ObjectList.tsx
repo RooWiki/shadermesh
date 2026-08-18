@@ -98,6 +98,7 @@ export function ObjectList() {
 
       {selectedObj?.meshData.uvs && (
         <>
+          <div className={styles.divider} />
           <UVMapPanel objectId={selectedObj.id} uvMap={selectedObj.uvMap} />
           <div className={styles.divider} />
           <div className={styles.uvSection}>
