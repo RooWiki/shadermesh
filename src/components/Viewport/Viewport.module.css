@@ -69,8 +69,8 @@
 
 .panelLabelMaximized {
   top: 6px !important;
-  left: unset !important;
-  right: 8px;
+  left: 8px !important;
+  right: unset;
 }
 
 /* Mode / tool indicator — bottom-left of top-left panel */
