@@ -5,7 +5,7 @@ import { makeLabelDrag } from '../Inspector/labelDrag'
 import {
   createShape2D,
   generate3D, defaultParams3D,
-  PRIMITIVE_3D_REGISTRY, CATEGORIES_3D, CATEGORY_LABELS_3D, TYPES_BY_CATEGORY_3D, QUICK_ACCESS_3D,
+  PRIMITIVE_3D_REGISTRY, CATEGORIES_3D, CATEGORY_LABELS_3D, TYPES_BY_CATEGORY_3D,
 } from '../../geometry/primitives'
 import type { Shape2DType, Primitive3DType, Category3D } from '../../geometry/primitives'
 import { PrimitivePreview } from './PrimitivePreview'
@@ -360,19 +360,6 @@ export function AddObjectModal({ onClose }: AddObjectModalProps) {
           <div className={styles.controlCol}>
             {tab === '3d' && (
               <>
-                {/* Quick-access row */}
-                <div className={styles.typeRow}>
-                  {QUICK_ACCESS_3D.map(t => (
-                    <button
-                      key={t}
-                      className={`${styles.typeBtn} ${prim3DType === t ? styles.typeBtnActive : ''}`}
-                      onClick={() => selectType3D(t)}
-                    >
-                      {PRIMITIVE_3D_REGISTRY[t].label}
-                    </button>
-                  ))}
-                </div>
-
                 {/* Category tabs */}
                 <div className={styles.catRow}>
                   {CATEGORIES_3D.map(cat => (
