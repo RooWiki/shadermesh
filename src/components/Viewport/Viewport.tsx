@@ -113,11 +113,13 @@ export function Viewport() {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
-  // Block browser context menu on Shift+Right Click globally
+  // Block browser context menu inside the viewport (3D canvas handles all right-click itself)
   useEffect(() => {
-    const block = (e: MouseEvent) => { if (e.shiftKey && e.button === 2) e.preventDefault() }
-    window.addEventListener('contextmenu', block, { capture: true })
-    return () => window.removeEventListener('contextmenu', block, { capture: true })
+    const el = containerRef.current
+    if (!el) return
+    const prevent = (e: Event) => e.preventDefault()
+    el.addEventListener('contextmenu', prevent, { capture: true })
+    return () => el.removeEventListener('contextmenu', prevent, { capture: true })
   }, [])
 
   // Right-click box-select in vertex/face mode — panel-aware NDC
