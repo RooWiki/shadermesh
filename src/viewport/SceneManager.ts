@@ -577,9 +577,11 @@ export class SceneManager {
       if (!incoming.has(id)) this.removeMeshFromScene(id)
     }
 
+    let newlyAddedSelectedId: string | null = null
     for (const obj of objects) {
       if (!this.meshMap.has(obj.id)) {
         this.addMeshToScene(obj)
+        if (obj.id === selectedId) newlyAddedSelectedId = obj.id
       } else {
         this.updateMeshGeometryIfChanged(obj)
         if (!(this.gizmoDragActive && this.currentMode === 'object' && obj.id === this.selectedId)) {
@@ -590,6 +592,11 @@ export class SceneManager {
 
     if (selectedId !== this.selectedId) {
       this.setSelection(selectedId)
+    }
+
+    if (newlyAddedSelectedId) {
+      const mesh = this.meshMap.get(newlyAddedSelectedId)
+      if (mesh) this.autoFrameNewObject(mesh)
     }
   }
 
@@ -773,29 +780,71 @@ export class SceneManager {
     }
   }
 
+  // ── Camera framing ───────────────────────────────────────────
+
+  private computeFrameParams(mesh: THREE.Mesh): { center: THREE.Vector3; radius: number; dist: number } {
+    const box = new THREE.Box3().setFromObject(mesh)
+    const center = box.getCenter(new THREE.Vector3())
+    if (box.isEmpty()) return { center, radius: 1, dist: 5 }
+
+    const sphere = new THREE.Sphere()
+    box.getBoundingSphere(sphere)
+    const radius = Math.max(sphere.radius, 0.01)
+
+    // Distance so the bounding sphere fills the tighter FOV axis, with 1.35× margin
+    const fovY = THREE.MathUtils.degToRad(this.perspCamera.fov)
+    const fovH = 2 * Math.atan(Math.tan(fovY / 2) * this.perspCamera.aspect)
+    const halfFov = Math.min(fovY, fovH) / 2
+    const dist = Math.max((radius / Math.sin(halfFov)) * 1.35, radius * 2.5, 0.3)
+
+    return { center, radius, dist }
+  }
+
   frameSelected() {
     if (!this.selectedId) return
     const mesh = this.meshMap.get(this.selectedId)
     if (!mesh) return
-    const box = new THREE.Box3().setFromObject(mesh)
-    const center = box.getCenter(new THREE.Vector3())
-    const size = box.getSize(new THREE.Vector3())
-    const radius = Math.max(size.x, size.y, size.z) * 1.5
+
+    const { center, radius, dist } = this.computeFrameParams(mesh)
     const ctrl = this.getActiveControls()
     ctrl.target.copy(center)
 
     if (this.activeViewport === 'persp') {
-      this.perspCamera.position.copy(center).addScaledVector(
-        this.perspCamera.position.clone().sub(center).normalize(),
-        Math.max(radius, 0.5),
-      )
+      // Diagonal view — simultaneously shows front, side and top
+      const dir = new THREE.Vector3(1, 0.7, 1).normalize()
+      this.perspCamera.position.copy(center).addScaledVector(dir, dist)
       ctrl.update()
     } else {
       const cam = this.getActiveCamera() as THREE.OrthographicCamera
-      const frustumH = cam.top - cam.bottom  // base frustum height (before zoom)
+      const frustumH = cam.top - cam.bottom
       cam.zoom = frustumH / Math.max(radius * 2.5, 0.1)
       cam.updateProjectionMatrix()
       ctrl.update()
+    }
+  }
+
+  // Auto-frame when a new object is created: preserve current camera direction,
+  // only adjust distance and orbit target so the object fills the viewport.
+  private autoFrameNewObject(mesh: THREE.Mesh) {
+    const { center, radius, dist } = this.computeFrameParams(mesh)
+
+    // Perspective — keep current view direction, pull/push to correct distance
+    let dir = this.perspCamera.position.clone().sub(center)
+    if (dir.lengthSq() < 1e-10) dir.set(1, 0.7, 1)
+    dir.normalize()
+    this.perspCamera.position.copy(center).addScaledVector(dir, dist)
+    this.perspControls.target.copy(center)
+    this.perspControls.update()
+
+    // Ortho cameras — re-center and adjust zoom
+    const orthoZoom = (ORTHO_SIZE * 2) / Math.max(radius * 2.5, 0.1)
+    for (const ctrl of [this.topControls, this.frontControls, this.rightControls]) {
+      ctrl.target.copy(center)
+      ctrl.update()
+    }
+    for (const cam of [this.topCamera, this.frontCamera, this.rightCamera]) {
+      cam.zoom = orthoZoom
+      cam.updateProjectionMatrix()
     }
   }
 
