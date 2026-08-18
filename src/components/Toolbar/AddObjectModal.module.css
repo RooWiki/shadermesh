@@ -124,7 +124,9 @@
   display: flex;
   flex-wrap: wrap;
   gap: 3px;
-  margin-bottom: 8px;
+  margin-bottom: 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #2a2a3a;
 }
 
 .catBtn {
@@ -153,6 +155,7 @@
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 3px;
+  margin-top: 8px;
   margin-bottom: 10px;
 }
 
