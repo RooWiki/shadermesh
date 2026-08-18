@@ -4,8 +4,8 @@ import type { MeshObject, Transform, PrimitiveSource } from '../core/MeshObject'
 import { createMeshObject } from '../core/MeshObject'
 import type { UVMapConfig } from '../geometry/uvProjection'
 import { projectUVs, projectUVsWithSeamFix, projectRadialUVsWithSeamFix, applyUVTransforms } from '../geometry/uvProjection'
-import { createPlane, createCube, createSphere, createCylinder, createCone, createTorus, createCapsule, createShape2D } from '../geometry/primitives'
-import type { CylinderParams, ConeParams, TorusParams, CapsuleParams, Shape2DType, Shape2DParams } from '../geometry/primitives'
+import { createPlane, createCube, createSphere, createCylinder, createCone, createTorus, createCapsule, createShape2D, generate3D } from '../geometry/primitives'
+import type { CylinderParams, ConeParams, TorusParams, CapsuleParams, Shape2DType, Shape2DParams, Primitive3DType } from '../geometry/primitives'
 import { recalculateFlatNormals, recalculateSmoothNormals } from '../geometry/normals'
 import { flipFace } from '../geometry/faces'
 import { calculateTangents } from '../geometry/tangents'
@@ -48,7 +48,8 @@ function generateMeshFromSource(source: PrimitiveSource) {
     case 'cone':     return createCone(source.params)
     case 'torus':    return createTorus(source.params)
     case 'capsule':  return createCapsule(source.params)
-    case 'shape2d':  return createShape2D(source.shapeType, source.params)
+    case 'shape2d':   return createShape2D(source.shapeType, source.params)
+    case 'extended3d': return generate3D(source.primitiveType, source.params)
   }
 }
 
@@ -81,6 +82,7 @@ interface SceneState {
   addTorus: (params?: TorusParams) => string
   addCapsule: (params?: CapsuleParams) => string
   addShape2D: (type: Shape2DType, params?: Shape2DParams) => string
+  addPrimitive3D: (type: Primitive3DType, params: Record<string, number>) => string
   importObject: (meshData: import('../core/MeshData').MeshData, name: string) => string
   removeObject: (id: string) => void
   renameObject: (id: string, name: string) => void
@@ -267,6 +269,16 @@ export const useSceneStore = create<SceneState>()(
       const name = `${label}.${String(objectCounter).padStart(3, '0')}`
       const source: PrimitiveSource = { kind: 'shape2d', shapeType: type, params: { ...params } }
       const obj = { ...createMeshObject(id, name, createShape2D(type, params)), sourceParams: source }
+      set(s => ({ objects: [...s.objects, obj], selectedObjectId: id }))
+      return id
+    },
+
+    addPrimitive3D: (type, params) => {
+      get().pushHistory()
+      const id = nextId()
+      const name = `${type.charAt(0).toUpperCase() + type.slice(1)}.${String(objectCounter).padStart(3, '0')}`
+      const source: PrimitiveSource = { kind: 'extended3d', primitiveType: type, params: { ...params } }
+      const obj = { ...createMeshObject(id, name, generate3D(type, params)), sourceParams: source }
       set(s => ({ objects: [...s.objects, obj], selectedObjectId: id }))
       return id
     },

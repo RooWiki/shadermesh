@@ -3,14 +3,14 @@ import { useSceneStore } from '../../state/sceneStore'
 import { NumberInput } from '../Inspector/NumberInput'
 import { makeLabelDrag } from '../Inspector/labelDrag'
 import {
-  createPlane, createCube, createSphere, createCylinder,
-  createCone, createTorus, createCapsule, createShape2D,
+  createShape2D,
+  generate3D, defaultParams3D,
+  PRIMITIVE_3D_REGISTRY, CATEGORIES_3D, CATEGORY_LABELS_3D, TYPES_BY_CATEGORY_3D, QUICK_ACCESS_3D,
 } from '../../geometry/primitives'
-import type { Shape2DType } from '../../geometry/primitives'
+import type { Shape2DType, Primitive3DType, Category3D } from '../../geometry/primitives'
 import { PrimitivePreview } from './PrimitivePreview'
 import styles from './AddObjectModal.module.css'
 
-type PrimitiveType = 'cube' | 'sphere' | 'cylinder' | 'cone' | 'torus' | 'capsule'
 type Tab = '3d' | '2d'
 type Category2D = 'curved' | 'triangles' | 'quads' | 'regular' | 'decorative' | 'lines'
 
@@ -78,37 +78,27 @@ const CATEGORIES: Category2D[] = ['curved', 'triangles', 'quads', 'regular', 'de
 export function AddObjectModal({ onClose }: AddObjectModalProps) {
   const [tab, setTab] = useState<Tab>('2d')
 
-  // 3D state
-  const [type, setType] = useState<PrimitiveType>('cube')
-  const [planeW, setPlaneW] = useState(1)
-  const [planeH, setPlaneH] = useState(1)
-  const [planeSX, setPlaneSX] = useState(1)
-  const [planeSY, setPlaneSY] = useState(1)
-  const [cubeW, setCubeW] = useState(1)
-  const [cubeH, setCubeH] = useState(1)
-  const [cubeD, setCubeD] = useState(1)
-  const [sphereR, setSphereR] = useState(0.5)
-  const [sphereWS, setSphereWS] = useState(32)
-  const [sphereHS, setSphereHS] = useState(16)
-  const [cylRT, setCylRT] = useState(0.5)
-  const [cylRB, setCylRB] = useState(0.5)
-  const [cylH, setCylH] = useState(1)
-  const [cylRS, setCylRS] = useState(16)
-  const [cylHS, setCylHS] = useState(1)
-  const [cylRise, setCylRise] = useState(0)
-  const [coneR, setConeR] = useState(0.5)
-  const [coneH, setConeH] = useState(1)
-  const [coneRS, setConeRS] = useState(16)
-  const [coneRise, setConeRise] = useState(0)
-  const [torR, setTorR] = useState(0.5)
-  const [torT, setTorT] = useState(0.2)
-  const [torRS, setTorRS] = useState(12)
-  const [torTS, setTorTS] = useState(32)
-  const [torRise, setTorRise] = useState(0)
-  const [capR, setCapR] = useState(0.4)
-  const [capH, setCapH] = useState(1)
-  const [capRS, setCapRS] = useState(16)
-  const [capHS, setCapHS] = useState(8)
+  // 3D state — registry-based
+  const [prim3DType, setPrim3DType] = useState<Primitive3DType>('cube')
+  const [prim3DParams, setPrim3DParams] = useState<Record<string, number>>(defaultParams3D('cube'))
+  const [prim3DCategory, setPrim3DCategory] = useState<Category3D>('basic')
+
+  const selectType3D = (t: Primitive3DType) => {
+    setPrim3DType(t)
+    setPrim3DParams(defaultParams3D(t))
+    setPrim3DCategory(PRIMITIVE_3D_REGISTRY[t].category)
+  }
+
+  const selectCategory3D = (cat: Category3D) => {
+    const firstType = TYPES_BY_CATEGORY_3D[cat][0]
+    setPrim3DCategory(cat)
+    setPrim3DType(firstType)
+    setPrim3DParams(defaultParams3D(firstType))
+  }
+
+  const updateParam3D = (key: string, val: number) => {
+    setPrim3DParams(prev => ({ ...prev, [key]: val }))
+  }
 
   // 2D state
   const [category, setCategory] = useState<Category2D>('curved')
@@ -196,15 +186,9 @@ export function AddObjectModal({ onClose }: AddObjectModalProps) {
 
   const [objectName, setObjectName] = useState('')
 
-  const addPlane      = useSceneStore(s => s.addPlane)
-  const addCube       = useSceneStore(s => s.addCube)
-  const addSphere     = useSceneStore(s => s.addSphere)
-  const addCylinder   = useSceneStore(s => s.addCylinder)
-  const addCone       = useSceneStore(s => s.addCone)
-  const addTorus      = useSceneStore(s => s.addTorus)
-  const addCapsule    = useSceneStore(s => s.addCapsule)
-  const addShape2D    = useSceneStore(s => s.addShape2D)
-  const renameObject  = useSceneStore(s => s.renameObject)
+  const addPrimitive3D = useSceneStore(s => s.addPrimitive3D)
+  const addShape2D     = useSceneStore(s => s.addShape2D)
+  const renameObject   = useSceneStore(s => s.renameObject)
 
   const get2DParams = (): Record<string, number> => {
     switch (shape2D) {
@@ -250,70 +234,56 @@ export function AddObjectModal({ onClose }: AddObjectModalProps) {
 
   const previewMeshData = useMemo(() => {
     try {
-      if (tab === '2d') {
-        const p2 = (() => {
-          switch (shape2D) {
-            case 'circle':      return { radius, segments }
-            case 'ellipse':     return { radiusX, radiusZ, segments }
-            case 'oval':        return { width: ovalW, height: ovalH, segments }
-            case 'semicircle':  return { radius, segments }
-            case 'arc':         return { innerRadius, outerRadius, startAngle, endAngle, segments, rise: arcRise }
-            case 'ring':        return { innerRadius, outerRadius, segments, rise: ringRise }
-            case 'sector':      return { radius, startAngle, endAngle, segments }
-            case 'segment':     return { radius, startAngle, endAngle, segments }
-            case 'crown':       return { innerRadius, outerRadius, segments, rise: ringRise }
-            case 'crescent':    return { outerRadius: cresOuterR, innerRadius: cresInnerR, offset: cresOffset, segments }
-            case 'spiral':      return { innerRadius: spiralInner, outerRadius: spiralOuter, turns: spiralTurns, width: spiralWidth, segments, rise: spiralRise }
-            case 'equilateral': return { side: triSide }
-            case 'isosceles':   return { base: isoBase, height: isoHeight }
-            case 'scalene':     return { base: scaBase, height: scaHeight, offset: scaleOffset }
-            case 'acute':       return { base: acuteBase, height: acuteHeight }
-            case 'right':       return { leg1: rightLeg1, leg2: rightLeg2 }
-            case 'obtuse':      return { base: obtuseBase, height: obtuseHeight }
-            case 'rectangle':   return { width: rectW, height: rectH }
-            case 'rhomboid':
-            case 'parallelogram': return { width: rectW, height: rectH, skew }
-            case 'square':      return { size: squareSize }
-            case 'rhombus':     return { diagonalH: rhDiagH, diagonalV: rhDiagV }
-            case 'trapezoid':   return { topWidth: trapTop, bottomWidth: trapBot, height: trapH }
-            case 'kite':        return { width: kiteW, topHeight: kiteTop, bottomHeight: kiteBot }
-            case 'pentagon':
-            case 'hexagon':
-            case 'heptagon':
-            case 'octagon':     return { radius: polyRadius }
-            case 'irregular':   return { radius: polyRadius, sides: polySides, irregularity }
-            case 'star':        return { outerRadius: starOuter, innerRadius: starInner, points: starPoints }
-            case 'arrow':       return { length: arrowLen, headWidth: arrowHW, headLength: arrowHL, shaftWidth: arrowSW }
-            case 'wedge':       return { width: wedgeW, depth: wedgeD, thickness: wedgeT }
-            case 'ribbon':      return { width: ribW, height: ribH, thickness: ribT }
-            case 'straight':    return { length: lineLen, width: lineW }
-            case 'curved':      return { length: lineLen, curvature, width: lineW }
-            case 'broken':      return { length1: brokenL1, length2: brokenL2, angle: brokenAngle, width: lineW }
-            case 'zigzag':      return { width: zzW, height: zzH, zigzags: zzSegs, thickness: zzT, smoothness: zzSmooth }
-          }
-        })()
-        return createShape2D(shape2D, p2 as never)
+      if (tab === '3d') {
+        return generate3D(prim3DType, prim3DParams)
       }
-      switch (type) {
-        case 'cube':     return createCube({ width: cubeW, height: cubeH, depth: cubeD })
-        case 'sphere':   return createSphere({ radius: sphereR, widthSegments: sphereWS, heightSegments: sphereHS })
-        case 'cylinder': return createCylinder({ radiusTop: cylRT, radiusBottom: cylRB, height: cylH, radialSegments: cylRS, heightSegments: cylHS, rise: cylRise })
-        case 'cone':     return createCone({ radius: coneR, height: coneH, radialSegments: coneRS, rise: coneRise })
-        case 'torus':    return createTorus({ radius: torR, tube: torT, radialSegments: torRS, tubularSegments: torTS, rise: torRise })
-        case 'capsule':  return createCapsule({ radius: capR, height: capH, radialSegments: capRS, hemisphereSegments: capHS })
-      }
+      const p2 = (() => {
+        switch (shape2D) {
+          case 'circle':      return { radius, segments }
+          case 'ellipse':     return { radiusX, radiusZ, segments }
+          case 'oval':        return { width: ovalW, height: ovalH, segments }
+          case 'semicircle':  return { radius, segments }
+          case 'arc':         return { innerRadius, outerRadius, startAngle, endAngle, segments, rise: arcRise }
+          case 'ring':        return { innerRadius, outerRadius, segments, rise: ringRise }
+          case 'sector':      return { radius, startAngle, endAngle, segments }
+          case 'segment':     return { radius, startAngle, endAngle, segments }
+          case 'crown':       return { innerRadius, outerRadius, segments, rise: ringRise }
+          case 'crescent':    return { outerRadius: cresOuterR, innerRadius: cresInnerR, offset: cresOffset, segments }
+          case 'spiral':      return { innerRadius: spiralInner, outerRadius: spiralOuter, turns: spiralTurns, width: spiralWidth, segments, rise: spiralRise }
+          case 'equilateral': return { side: triSide }
+          case 'isosceles':   return { base: isoBase, height: isoHeight }
+          case 'scalene':     return { base: scaBase, height: scaHeight, offset: scaleOffset }
+          case 'acute':       return { base: acuteBase, height: acuteHeight }
+          case 'right':       return { leg1: rightLeg1, leg2: rightLeg2 }
+          case 'obtuse':      return { base: obtuseBase, height: obtuseHeight }
+          case 'rectangle':   return { width: rectW, height: rectH }
+          case 'rhomboid':
+          case 'parallelogram': return { width: rectW, height: rectH, skew }
+          case 'square':      return { size: squareSize }
+          case 'rhombus':     return { diagonalH: rhDiagH, diagonalV: rhDiagV }
+          case 'trapezoid':   return { topWidth: trapTop, bottomWidth: trapBot, height: trapH }
+          case 'kite':        return { width: kiteW, topHeight: kiteTop, bottomHeight: kiteBot }
+          case 'pentagon':
+          case 'hexagon':
+          case 'heptagon':
+          case 'octagon':     return { radius: polyRadius }
+          case 'irregular':   return { radius: polyRadius, sides: polySides, irregularity }
+          case 'star':        return { outerRadius: starOuter, innerRadius: starInner, points: starPoints }
+          case 'arrow':       return { length: arrowLen, headWidth: arrowHW, headLength: arrowHL, shaftWidth: arrowSW }
+          case 'wedge':       return { width: wedgeW, depth: wedgeD, thickness: wedgeT }
+          case 'ribbon':      return { width: ribW, height: ribH, thickness: ribT }
+          case 'straight':    return { length: lineLen, width: lineW }
+          case 'curved':      return { length: lineLen, curvature, width: lineW }
+          case 'broken':      return { length1: brokenL1, length2: brokenL2, angle: brokenAngle, width: lineW }
+          case 'zigzag':      return { width: zzW, height: zzH, zigzags: zzSegs, thickness: zzT, smoothness: zzSmooth }
+        }
+      })()
+      return createShape2D(shape2D, p2 as never)
     } catch {
-      return createCube({})
+      return generate3D('cube', defaultParams3D('cube'))
     }
   }, [
-    tab, type, shape2D,
-    planeW, planeH, planeSX, planeSY,
-    cubeW, cubeH, cubeD,
-    sphereR, sphereWS, sphereHS,
-    cylRT, cylRB, cylH, cylRS, cylHS, cylRise,
-    coneR, coneH, coneRS, coneRise,
-    torR, torT, torRS, torTS, torRise,
-    capR, capH, capRS, capHS,
+    tab, prim3DType, prim3DParams, shape2D,
     radius, radiusX, radiusZ, ovalW, ovalH, segments,
     innerRadius, outerRadius, startAngle, endAngle, arcRise, ringRise,
     cresOuterR, cresInnerR, cresOffset,
@@ -334,12 +304,7 @@ export function AddObjectModal({ onClose }: AddObjectModalProps) {
   const handleAdd = () => {
     let id: string
     if (tab === '3d') {
-      if      (type === 'cube')     id = addCube({ width: cubeW, height: cubeH, depth: cubeD })
-      else if (type === 'sphere')   id = addSphere({ radius: sphereR, widthSegments: sphereWS, heightSegments: sphereHS })
-      else if (type === 'cylinder') id = addCylinder({ radiusTop: cylRT, radiusBottom: cylRB, height: cylH, radialSegments: cylRS, heightSegments: cylHS, rise: cylRise })
-      else if (type === 'cone')     id = addCone({ radius: coneR, height: coneH, radialSegments: coneRS, rise: coneRise })
-      else if (type === 'torus')    id = addTorus({ radius: torR, tube: torT, radialSegments: torRS, tubularSegments: torTS, rise: torRise })
-      else                          id = addCapsule({ radius: capR, height: capH, radialSegments: capRS, hemisphereSegments: capHS })
+      id = addPrimitive3D(prim3DType, prim3DParams)
     } else {
       id = addShape2D(shape2D, get2DParams())
     }
@@ -368,15 +333,12 @@ export function AddObjectModal({ onClose }: AddObjectModalProps) {
     </label>
   )
 
-  const TYPES: PrimitiveType[] = ['cube', 'sphere', 'cylinder', 'cone', 'torus', 'capsule']
-  const LABELS: Record<PrimitiveType, string> = {
-    cube: 'Cube', sphere: 'Sphere',
-    cylinder: 'Cylinder', cone: 'Cone', torus: 'Torus', capsule: 'Capsule',
-  }
-
   const namePlaceholder = tab === '2d'
     ? shape2D.charAt(0).toUpperCase() + shape2D.slice(1)
-    : LABELS[type]
+    : PRIMITIVE_3D_REGISTRY[prim3DType].label
+
+  const vertCount = previewMeshData ? previewMeshData.positions.length / 3 : 0
+  const triCount  = previewMeshData ? previewMeshData.indices.length / 3 : 0
 
   return (
     <div className={styles.overlay}>
@@ -398,71 +360,58 @@ export function AddObjectModal({ onClose }: AddObjectModalProps) {
           <div className={styles.controlCol}>
             {tab === '3d' && (
               <>
+                {/* Quick-access row */}
                 <div className={styles.typeRow}>
-                  {TYPES.map(t => (
+                  {QUICK_ACCESS_3D.map(t => (
                     <button
                       key={t}
-                      className={`${styles.typeBtn} ${type === t ? styles.typeBtnActive : ''}`}
-                      onClick={() => setType(t)}
+                      className={`${styles.typeBtn} ${prim3DType === t ? styles.typeBtnActive : ''}`}
+                      onClick={() => selectType3D(t)}
                     >
-                      {LABELS[t]}
+                      {PRIMITIVE_3D_REGISTRY[t].label}
                     </button>
                   ))}
                 </div>
 
+                {/* Category tabs */}
+                <div className={styles.catRow}>
+                  {CATEGORIES_3D.map(cat => (
+                    <button
+                      key={cat}
+                      className={`${styles.catBtn} ${prim3DCategory === cat ? styles.catBtnActive : ''}`}
+                      onClick={() => selectCategory3D(cat)}
+                    >
+                      {CATEGORY_LABELS_3D[cat]}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Shape grid */}
+                <div className={styles.shapeGrid}>
+                  {TYPES_BY_CATEGORY_3D[prim3DCategory].map(t => (
+                    <button
+                      key={t}
+                      className={`${styles.shapeBtn} ${prim3DType === t ? styles.shapeBtnActive : ''}`}
+                      onClick={() => selectType3D(t)}
+                    >
+                      {PRIMITIVE_3D_REGISTRY[t].label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Dynamic fields */}
                 <div className={styles.fields}>
-                  {type === 'cube' && (
-                    <>
-                      {field('Width', cubeW, setCubeW)}
-                      {field('Height', cubeH, setCubeH)}
-                      {field('Depth', cubeD, setCubeD)}
-                      <div className={styles.hint}>24 verts · 12 tris</div>
-                    </>
-                  )}
-                  {type === 'sphere' && (
-                    <>
-                      {field('Radius', sphereR, setSphereR)}
-                      {intField('Width Segments', sphereWS, setSphereWS, 3)}
-                      {intField('Height Segments', sphereHS, setSphereHS, 2)}
-                      <div className={styles.hint}>{(sphereWS + 1) * (sphereHS + 1)} verts</div>
-                    </>
-                  )}
-                  {type === 'cylinder' && (
-                    <>
-                      {field('Radius Top', cylRT, setCylRT, 0.1, 3, 0)}
-                      {field('Radius Bottom', cylRB, setCylRB, 0.1, 3, 0.001)}
-                      {field('Height', cylH, setCylH)}
-                      {intField('Radial Segments', cylRS, setCylRS, 3)}
-                      {intField('Height Segments', cylHS, setCylHS)}
-                      {field('Rise / Rev', cylRise, setCylRise, 0.1, 3, -Infinity)}
-                    </>
-                  )}
-                  {type === 'cone' && (
-                    <>
-                      {field('Radius', coneR, setConeR)}
-                      {field('Height', coneH, setConeH)}
-                      {intField('Radial Segments', coneRS, setConeRS, 3)}
-                      {field('Rise / Rev', coneRise, setConeRise, 0.1, 3, -Infinity)}
-                    </>
-                  )}
-                  {type === 'torus' && (
-                    <>
-                      {field('Radius', torR, setTorR)}
-                      {field('Tube', torT, setTorT)}
-                      {intField('Radial Segments', torRS, setTorRS, 3)}
-                      {intField('Tubular Segments', torTS, setTorTS, 3)}
-                      {field('Rise / Rev', torRise, setTorRise, 0.1, 3, -Infinity)}
-                      <div className={styles.hint}>{(torRS + 1) * (torTS + 1)} verts · {torRS * torTS * 2} tris</div>
-                    </>
-                  )}
-                  {type === 'capsule' && (
-                    <>
-                      {field('Radius', capR, setCapR)}
-                      {field('Height', capH, setCapH, 0.1, 3, 0)}
-                      {intField('Radial Segments', capRS, setCapRS, 3)}
-                      {intField('Hemisphere Segs', capHS, setCapHS)}
-                    </>
-                  )}
+                  {PRIMITIVE_3D_REGISTRY[prim3DType].fields.map(fd => {
+                    const val = prim3DParams[fd.key] ?? fd.default
+                    const setVal = (n: number) => updateParam3D(fd.key, Math.max(fd.min, fd.isInt ? Math.round(n) : n))
+                    return (
+                      <label key={fd.key} className={styles.field}>
+                        <span className={styles.fieldLabel} onMouseDown={makeLabelDrag(val, setVal, fd.step, fd.decimals)}>{fd.label}</span>
+                        <NumberInput className={styles.input} value={val} step={fd.step} decimals={fd.decimals} onChange={setVal} />
+                      </label>
+                    )
+                  })}
+                  <div className={styles.hint}>{vertCount} verts · {triCount} tris</div>
                 </div>
               </>
             )}

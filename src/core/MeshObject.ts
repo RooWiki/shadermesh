@@ -1,5 +1,6 @@
 import type { MeshData } from './MeshData'
 import type { Shape2DType, Shape2DParams } from '../geometry/primitives/create2DShapes'
+import type { Primitive3DType } from '../geometry/primitives/registry3D'
 import type { UVMapConfig } from '../geometry/uvProjection'
 
 export type PrimitiveSource =
@@ -11,6 +12,7 @@ export type PrimitiveSource =
   | { kind: 'torus';     params: { radius: number; tube: number; radialSegments: number; tubularSegments: number; rise: number } }
   | { kind: 'capsule';   params: { radius: number; height: number; radialSegments: number; hemisphereSegments: number } }
   | { kind: 'shape2d';   shapeType: Shape2DType; params: Shape2DParams }
+  | { kind: 'extended3d'; primitiveType: Primitive3DType; params: Record<string, number> }
 
 export interface Transform {
   position: [number, number, number]

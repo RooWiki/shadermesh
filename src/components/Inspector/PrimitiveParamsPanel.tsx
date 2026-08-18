@@ -2,6 +2,7 @@ import type { PrimitiveSource } from '../../core/MeshObject'
 import { useSceneStore } from '../../state/sceneStore'
 import { NumberInput } from './NumberInput'
 import { makeLabelDrag } from './labelDrag'
+import { PRIMITIVE_3D_REGISTRY } from '../../geometry/primitives'
 import styles from './Inspector.module.css'
 
 const INT_KEYS = new Set(['radialSegments', 'tubularSegments', 'heightSegments', 'widthSegments', 'hemisphereSegments', 'subdivisionsX', 'subdivisionsY', 'sides', 'points', 'zigzags', 'segments'])
@@ -70,13 +71,18 @@ export function PrimitiveParamsPanel({ objectId, sourceParams }: Props) {
   const params = sourceParams.kind === 'shape2d' ? sourceParams.params : sourceParams.params as Record<string, number>
   const entries = Object.entries(params)
 
+  const regFields = sourceParams.kind === 'extended3d'
+    ? PRIMITIVE_3D_REGISTRY[sourceParams.primitiveType]?.fields
+    : undefined
+
   return (
     <div className={styles.section}>
       <div className={styles.sectionTitle}>Geometry</div>
       {entries.map(([key, value]) => {
+        const regField = regFields?.find(f => f.key === key)
         const cfg = PARAM_CONFIGS[key]
-        const label = cfg?.label ?? toLabel(key)
-        const isInt = cfg?.isInt ?? INT_KEYS.has(key)
+        const label = regField?.label ?? cfg?.label ?? toLabel(key)
+        const isInt = regField?.isInt ?? cfg?.isInt ?? INT_KEYS.has(key)
         return (
           <ParamRow
             key={key}
