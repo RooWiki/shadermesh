@@ -7,7 +7,7 @@ import { projectUVs, projectUVsWithSeamFix, projectRadialUVsWithSeamFix, applyUV
 import { createPlane, createCube, createSphere, createCylinder, createCone, createTorus, createCapsule, createShape2D, generate3D } from '../geometry/primitives'
 import type { CylinderParams, ConeParams, TorusParams, CapsuleParams, Shape2DType, Shape2DParams, Primitive3DType } from '../geometry/primitives'
 import { recalculateFlatNormals, recalculateSmoothNormals } from '../geometry/normals'
-import { flipFace } from '../geometry/faces'
+import { flipFace, flipFaces } from '../geometry/faces'
 import { calculateTangents } from '../geometry/tangents'
 
 export type EditorMode = 'object' | 'vertex' | 'face'
@@ -116,6 +116,7 @@ interface SceneState {
   selectFace: (index: number | null) => void
   selectFaces: (indices: number[]) => void
   flipFaceNormal: (objectId: string, faceIndex: number) => void
+  flipFacesNormal: (objectId: string, faceIndices: number[]) => void
 
   // Tangents
   computeTangents: (objectId: string) => void
@@ -384,6 +385,17 @@ export const useSceneStore = create<SceneState>()(
         objects: s.objects.map(o => {
           if (o.id !== objectId) return o
           return { ...o, meshData: flipFace(o.meshData, faceIndex) }
+        }),
+      }))
+    },
+
+    flipFacesNormal: (objectId, faceIndices) => {
+      if (faceIndices.length === 0) return
+      get().pushHistory()
+      set(s => ({
+        objects: s.objects.map(o => {
+          if (o.id !== objectId) return o
+          return { ...o, meshData: flipFaces(o.meshData, faceIndices) }
         }),
       }))
     },

@@ -10,6 +10,7 @@ interface FaceGroupPanelProps {
 
 export function FaceGroupPanel({ objectId, faceIndices }: FaceGroupPanelProps) {
   const obj = useSceneStore(s => s.objects.find(o => o.id === objectId))
+  const flipFacesNormal = useSceneStore(s => s.flipFacesNormal)
   if (!obj) return null
 
   const { positions, indices } = obj.meshData
@@ -36,6 +37,16 @@ export function FaceGroupPanel({ objectId, faceIndices }: FaceGroupPanelProps) {
           <span className={styles.statVal}>{totalArea.toFixed(6)}</span>
         </div>
       </div>
+      <div className={styles.actionRow}>
+        <button
+          className={styles.actionBtn}
+          onClick={() => flipFacesNormal(objectId, faceIndices)}
+          title="Invert winding of all selected faces"
+        >
+          Flip Normals
+        </button>
+      </div>
+
       <div className={styles.vec3Block}>
         <div className={styles.vec3Label}>Centroid</div>
         <div className={styles.vec3Inputs}>
