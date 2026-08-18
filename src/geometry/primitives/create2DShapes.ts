@@ -255,9 +255,11 @@ export function createCrescent(p: CrescentParams = {}): MeshData {
   const innerPts: Pt[] = []
   for (let i = 0; i <= seg; i++) {
     const t = i / seg
+    // outer: P+ → CCW → P−  (the large arc, spanning 2π − 2·halfAngle)
     const ao = halfAngle + t * (Math.PI * 2 - 2 * halfAngle)
     outerPts.push([R * Math.cos(ao), R * Math.sin(ao)])
-    const ai = (Math.PI + halfAngleB) - t * 2 * halfAngleB
+    // inner: P+ → CCW → P−  same direction so quads don't twist
+    const ai = (Math.PI - halfAngleB) + t * 2 * halfAngleB
     innerPts.push([d + r * Math.cos(ai), r * Math.sin(ai)])
   }
 
