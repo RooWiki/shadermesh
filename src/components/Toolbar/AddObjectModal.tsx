@@ -474,7 +474,7 @@ export function AddObjectModal({ onClose }: AddObjectModalProps) {
                     <button
                       key={cat}
                       className={`${styles.catBtn} ${category === cat ? styles.catBtnActive : ''}`}
-                      onClick={() => setCategory(cat)}
+                      onClick={() => { setCategory(cat); setShape2D(SHAPES_BY_CATEGORY[cat][0].type) }}
                     >
                       {CATEGORY_LABELS[cat]}
                     </button>
