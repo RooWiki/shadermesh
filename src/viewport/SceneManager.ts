@@ -135,6 +135,11 @@ export class SceneManager {
   private faceHighlightMat: THREE.MeshBasicMaterial
   private showVertexColors = false
 
+  // Theme-driven colors (updated via MutationObserver on data-theme)
+  private viewportBgHex = 0x2c2c2e
+  private gizmoBgHex    = 0x3a3a3c
+  private themeObserver: MutationObserver | null = null
+
   constructor(
     container: HTMLDivElement,
     onSelect: SelectCallback,
@@ -203,7 +208,7 @@ export class SceneManager {
     fillLight.position.set(-5, -2, -5)
     this.scene.add(fillLight)
 
-    this.gridHelper = new THREE.GridHelper(20, 20, 0x444455, 0x2a2a36)
+    this.gridHelper = new THREE.GridHelper(20, 20, 0x484848, 0x363636)
     this.scene.add(this.gridHelper)
     this.scene.add(new THREE.AxesHelper(0.5))
 
@@ -328,7 +333,37 @@ export class SceneManager {
     this.resizeObserver = new ResizeObserver(this.onResize)
     this.resizeObserver.observe(container)
 
+    this.initThemeObserver()
     this.animate()
+  }
+
+  private parseCSSHex(varName: string, fallback: number): number {
+    const val = getComputedStyle(document.documentElement).getPropertyValue(varName).trim()
+    if (!val) return fallback
+    try { return new THREE.Color(val).getHex() } catch { return fallback }
+  }
+
+  private initThemeObserver() {
+    const update = () => {
+      this.viewportBgHex = this.parseCSSHex('--viewport-bg', 0x2c2c2e)
+      this.gizmoBgHex    = this.parseCSSHex('--gizmo-bg', 0x3a3a3c)
+      const gridMain = this.parseCSSHex('--viewport-grid-main', 0x484848)
+      const gridSub  = this.parseCSSHex('--viewport-grid-sub', 0x363636)
+      const wasVisible = this.gridHelper?.visible ?? true
+      if (this.gridHelper) {
+        this.scene.remove(this.gridHelper)
+        this.gridHelper.geometry.dispose()
+        const mat = this.gridHelper.material
+        if (Array.isArray(mat)) mat.forEach(m => m.dispose())
+        else mat.dispose()
+      }
+      this.gridHelper = new THREE.GridHelper(20, 20, gridMain, gridSub)
+      this.gridHelper.visible = wasVisible
+      this.scene.add(this.gridHelper)
+    }
+    update()
+    this.themeObserver = new MutationObserver(update)
+    this.themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
   }
 
   private resizeObserver: ResizeObserver
@@ -1199,7 +1234,7 @@ export class SceneManager {
   private renderPanel(camera: THREE.Camera, glX: number, glY: number, w: number, h: number) {
     this.renderer.setViewport(glX, glY, w, h)
     this.renderer.setScissor(glX, glY, w, h)
-    this.renderer.setClearColor(0x1e1e24, 1)
+    this.renderer.setClearColor(this.viewportBgHex, 1)
     this.renderer.clear(true, true, false)
     this.renderer.render(this.scene, camera)
   }
@@ -1262,7 +1297,7 @@ export class SceneManager {
     const savedColor = new THREE.Color()
     const savedAlpha = this.renderer.getClearAlpha()
     this.renderer.getClearColor(savedColor)
-    this.renderer.setClearColor(0x1e1e2e, 1)
+    this.renderer.setClearColor(this.gizmoBgHex, 1)
     this.renderer.clear(true, true, false)
     this.renderer.render(this.gizmoScene, this.gizmoCamera)
     this.renderer.setClearColor(savedColor, savedAlpha)
@@ -1273,6 +1308,7 @@ export class SceneManager {
   dispose() {
     cancelAnimationFrame(this.animFrameId)
     this.resizeObserver.disconnect()
+    this.themeObserver?.disconnect()
     this.renderer.domElement.removeEventListener('pointermove', this.onPointerHover)
     this.renderer.domElement.removeEventListener('pointerdown', this.onPointerDown, true)
     this.clearVertexOverlay()

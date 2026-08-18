@@ -112,6 +112,12 @@
   --ui-wip-color: #f0a050;
   --ui-wip-bg: rgba(240,160,80,0.1);
   --ui-wip-border: rgba(240,160,80,0.2);
+
+  /* 3D Viewport */
+  --viewport-bg:         #2C2C2E;
+  --gizmo-bg:            #3A3A3C;
+  --viewport-grid-main:  #484848;
+  --viewport-grid-sub:   #363636;
 }
 
 /* iOS systemGray palette — Light theme */
@@ -213,4 +219,10 @@
   --ui-wip-color: #c07800;
   --ui-wip-bg: rgba(192,120,0,0.1);
   --ui-wip-border: rgba(192,120,0,0.2);
+
+  /* 3D Viewport */
+  --viewport-bg:         #D1D1D6;
+  --gizmo-bg:            #C7C7CC;
+  --viewport-grid-main:  #AEAEB2;
+  --viewport-grid-sub:   #C7C7CC;
 }
