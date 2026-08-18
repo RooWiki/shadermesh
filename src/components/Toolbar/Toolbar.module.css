@@ -4,8 +4,9 @@
   gap: 8px;
   height: 100%;
   padding: 0 12px;
-  background: #18181e;
-  border-bottom: 1px solid #2a2a36;
+  background: var(--ui-panel);
+  border-bottom: 1px solid var(--ui-border-subtle);
+  transition: background-color 0.25s ease, border-color 0.25s ease;
 }
 
 .brand {
@@ -15,7 +16,7 @@
   font-size: 13px;
   font-weight: 800;
   letter-spacing: 0.06em;
-  color: #5c7cfa;
+  color: var(--ui-brand);
   white-space: nowrap;
 }
 
@@ -29,26 +30,26 @@
 .divider {
   width: 1px;
   height: 18px;
-  background: #2a2a3a;
+  background: var(--ui-border);
   flex-shrink: 0;
 }
 
 .addBtn {
   padding: 4px 12px;
-  background: #1e3a6a;
-  border: 1px solid #5c7cfa;
-  color: #7aace0;
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-border);
+  color: var(--ui-text-muted);
   font-size: 11px;
   font-weight: 600;
   border-radius: 4px;
   cursor: pointer;
   white-space: nowrap;
-  transition: all 0.1s;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
 }
 
 .addBtn:hover {
-  background: #234285;
-  color: #a0c8f0;
+  background: var(--ui-hover);
+  color: var(--ui-text);
 }
 
 .modeGroup {
@@ -58,40 +59,40 @@
 
 .modeBtn {
   padding: 4px 10px;
-  background: #1a1a26;
-  border: 1px solid #2a2a3a;
-  color: #7070a0;
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-border);
+  color: var(--ui-text-dim);
   font-size: 11px;
   border-radius: 3px;
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: 5px;
-  transition: all 0.1s;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
 }
 
 .modeBtn:hover {
-  background: #222234;
-  color: #b0b0c8;
+  background: var(--ui-hover);
+  color: var(--ui-text-muted);
 }
 
 .modeBtnActive {
-  background: #1e2d4a;
-  border-color: #3a5a9a;
-  color: #7aace0;
+  background: var(--ui-active-bg);
+  border-color: var(--ui-active-border);
+  color: var(--ui-active-text);
 }
 
 .modeBtnKey {
   font-size: 9px;
-  color: #50506a;
-  background: #0e0e18;
+  color: var(--ui-text-faint);
+  background: var(--ui-bg);
   padding: 1px 3px;
   border-radius: 2px;
   font-family: monospace;
 }
 
 .modeBtnActive .modeBtnKey {
-  color: #4a6a9a;
+  color: var(--ui-text-dim);
 }
 
 .wfGroup {
@@ -101,24 +102,24 @@
 
 .wfBtn {
   padding: 4px 9px;
-  background: #1a1a26;
-  border: 1px solid #2a2a3a;
-  color: #7070a0;
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-border);
+  color: var(--ui-text-dim);
   font-size: 11px;
   border-radius: 3px;
   cursor: pointer;
-  transition: all 0.1s;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
 }
 
 .wfBtn:hover {
-  background: #222234;
-  color: #b0b0c8;
+  background: var(--ui-hover);
+  color: var(--ui-text-muted);
 }
 
 .wfBtnActive {
-  background: #1a2a1a;
-  border-color: #3a6a3a;
-  color: #70c070;
+  background: var(--ui-active-bg);
+  border-color: var(--ui-active-border);
+  color: var(--ui-active-text);
 }
 
 .spacer {
@@ -130,9 +131,27 @@
 }
 
 .wip {
-  color: #f0a050;
-  background: rgba(240, 160, 80, 0.1);
+  color: var(--ui-wip-color);
+  background: var(--ui-wip-bg);
   padding: 3px 8px;
   border-radius: 3px;
-  border: 1px solid rgba(240, 160, 80, 0.2);
+  border: 1px solid var(--ui-wip-border);
+}
+
+/* Theme toggle button */
+.themeBtn {
+  padding: 4px 8px;
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-border);
+  color: var(--ui-text-dim);
+  font-size: 13px;
+  border-radius: 3px;
+  cursor: pointer;
+  line-height: 1;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.themeBtn:hover {
+  background: var(--ui-hover);
+  color: var(--ui-text);
 }

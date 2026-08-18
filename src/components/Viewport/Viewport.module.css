@@ -3,7 +3,7 @@
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background: #1e1e24;
+  background: var(--ui-panel);
 }
 
 .canvas {
@@ -31,7 +31,7 @@
   bottom: 0;
   left: 50%;
   width: 1px;
-  background: #2a2a38;
+  background: var(--ui-panel-divider);
 }
 .quadDivider::after {
   content: '';
@@ -40,7 +40,7 @@
   right: 0;
   top: 50%;
   height: 1px;
-  background: #2a2a38;
+  background: var(--ui-panel-divider);
 }
 
 /* Panel name labels */
@@ -49,7 +49,7 @@
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.06em;
-  color: #4a4a60;
+  color: var(--ui-label-color);
   pointer-events: auto;
   cursor: pointer;
   user-select: none;
@@ -59,7 +59,7 @@
   transition: color 0.15s;
 }
 .panelLabel:hover {
-  color: #8888aa;
+  color: var(--ui-label-hover);
 }
 
 .labelTop   { top: 6px;              left: 8px; }
@@ -81,11 +81,11 @@
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.08em;
-  color: #f0a050;
-  background: rgba(0, 0, 0, 0.5);
+  color: var(--ui-mode-color);
+  background: var(--ui-mode-bg);
   padding: 3px 8px;
   border-radius: 3px;
-  border: 1px solid rgba(240, 160, 80, 0.3);
+  border: 1px solid var(--ui-mode-border);
   pointer-events: none;
   z-index: 2;
 }
@@ -102,8 +102,8 @@
 
 .shortcuts span {
   font-size: 10px;
-  color: #6a6a80;
-  background: rgba(0, 0, 0, 0.4);
+  color: var(--ui-shortcut-color);
+  background: var(--ui-shortcut-bg);
   padding: 2px 6px;
   border-radius: 3px;
 }
@@ -114,8 +114,8 @@
   bottom: 12px;
   right: 12px;
   width: 200px;
-  background: #13131c;
-  border: 1px solid #2e2e44;
+  background: var(--ui-uv-bg);
+  border: 1px solid var(--ui-uv-border);
   border-radius: 6px;
   overflow: hidden;
   z-index: 10;
@@ -130,18 +130,18 @@
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.1em;
-  color: #6a6a88;
-  background: #1a1a28;
+  color: var(--ui-uv-text);
+  background: var(--ui-uv-header);
   cursor: pointer;
   user-select: none;
-  border-bottom: 1px solid #2a2a3a;
+  border-bottom: 1px solid var(--ui-uv-border);
 }
 
 .uvPanelHeader:hover {
-  color: #9090b8;
+  color: var(--ui-text-muted);
 }
 
 .uvPanelToggle {
   font-size: 8px;
-  color: #4a4a66;
+  color: var(--ui-uv-toggle);
 }

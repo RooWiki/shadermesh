@@ -2,6 +2,6 @@
   width: 100%;
   display: block;
   border-radius: 4px;
-  background: #0e0e1a;
-  border: 1px solid #2a2a3a;
+  background: var(--ui-preview-bg);
+  border: 1px solid var(--ui-border);
 }

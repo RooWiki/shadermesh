@@ -3,8 +3,9 @@
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: #1c1c22;
+  background: var(--ui-panel);
   overflow: hidden;
+  transition: background-color 0.25s ease;
 }
 
 .header {
@@ -12,9 +13,9 @@
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.1em;
-  color: #6a6a80;
+  color: var(--ui-text-dim);
   text-transform: uppercase;
-  border-bottom: 1px solid #2a2a36;
+  border-bottom: 1px solid var(--ui-border-subtle);
   flex-shrink: 0;
 }
 
@@ -26,7 +27,7 @@
 .empty {
   padding: 12px;
   font-size: 11px;
-  color: #44445a;
+  color: var(--ui-text-faint);
   text-align: center;
 }
 
@@ -39,22 +40,22 @@
   border-radius: 3px;
   margin: 1px 4px;
   font-size: 12px;
-  color: #c8c8dc;
-  transition: background 0.1s;
+  color: var(--ui-text);
+  transition: background-color 0.1s;
 }
 
 .item:hover {
-  background: #252530;
+  background: var(--ui-hover);
 }
 
 .item.selected {
-  background: #1e2d4a;
-  color: #7aace0;
+  background: var(--ui-selected-bg);
+  color: var(--ui-selected-text);
 }
 
 .icon {
   font-size: 10px;
-  color: #5a7aaa;
+  color: var(--ui-text-dim);
   flex-shrink: 0;
 }
 
@@ -68,7 +69,7 @@
 .deleteBtn {
   background: none;
   border: none;
-  color: #44445a;
+  color: var(--ui-text-faint);
   cursor: pointer;
   font-size: 10px;
   padding: 2px 4px;
@@ -82,18 +83,18 @@
 }
 
 .deleteBtn:hover {
-  color: #ff6666;
+  color: var(--ui-danger);
 }
 
 .divider {
   height: 1px;
-  background: #2a2a36;
+  background: var(--ui-border-subtle);
   flex-shrink: 0;
 }
 
 .uvSection {
   flex-shrink: 0;
-  border-top: 1px solid #2a2a36;
+  border-top: 1px solid var(--ui-border-subtle);
 }
 
 .uvHeader {
@@ -105,22 +106,22 @@
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #6a6a80;
+  color: var(--ui-text-dim);
   cursor: pointer;
   user-select: none;
 }
 
 .uvHeader:hover {
-  color: #9090b0;
+  color: var(--ui-text-muted);
 }
 
 .renameInput {
   flex: 1;
   min-width: 0;
-  background: #111120;
-  border: 1px solid #5c7cfa;
+  background: var(--ui-input);
+  border: 1px solid var(--ui-focus);
   border-radius: 3px;
-  color: #e0e0f4;
+  color: var(--ui-text);
   font-size: 12px;
   font-family: inherit;
   padding: 1px 4px;

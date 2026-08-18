@@ -9,8 +9,8 @@
 }
 
 .modal {
-  background: #252530;
-  border: 1px solid #3a3a4a;
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-border);
   border-radius: 6px;
   padding: 20px;
   width: 500px;
@@ -20,7 +20,7 @@
 .title {
   font-size: 13px;
   font-weight: 700;
-  color: #d0d0e8;
+  color: var(--ui-text);
   margin-bottom: 12px;
   letter-spacing: 0.04em;
 }
@@ -35,23 +35,23 @@
 .tabBtn {
   flex: 1;
   padding: 5px 8px;
-  background: #1a1a26;
-  border: 1px solid #3a3a4a;
-  color: #7070a0;
+  background: var(--ui-panel);
+  border: 1px solid var(--ui-border);
+  color: var(--ui-text-dim);
   font-size: 11px;
   font-weight: 600;
   border-radius: 4px;
   cursor: pointer;
   letter-spacing: 0.04em;
-  transition: all 0.1s;
+  transition: background-color 0.1s, color 0.1s;
 }
 
-.tabBtn:hover { background: #222234; color: #b0b0d0; }
+.tabBtn:hover { background: var(--ui-hover); color: var(--ui-text-muted); }
 
 .tabBtnActive {
-  background: #1a2a40;
-  border-color: #5c7cfa;
-  color: #7aace0;
+  background: var(--ui-active-bg);
+  border-color: var(--ui-active-border);
+  color: var(--ui-active-text);
 }
 
 /* Two-column layout */
@@ -72,7 +72,7 @@
   max-height: 260px;
   padding-right: 4px;
   scrollbar-width: thin;
-  scrollbar-color: #3a3a50 transparent;
+  scrollbar-color: var(--ui-scrollbar) transparent;
 }
 
 .controlCol::-webkit-scrollbar {
@@ -84,7 +84,7 @@
 }
 
 .controlCol::-webkit-scrollbar-thumb {
-  background: #3a3a50;
+  background: var(--ui-scrollbar);
   border-radius: 2px;
 }
 
@@ -99,24 +99,24 @@
 .typeBtn {
   flex: 1 1 auto;
   padding: 5px 6px;
-  background: #1a1a26;
-  border: 1px solid #3a3a4a;
-  color: #8888a8;
+  background: var(--ui-panel);
+  border: 1px solid var(--ui-border);
+  color: var(--ui-text-dim);
   font-size: 11px;
   border-radius: 4px;
   cursor: pointer;
-  transition: all 0.1s;
+  transition: background-color 0.1s, color 0.1s;
 }
 
 .typeBtn:hover {
-  background: #222234;
-  color: #c0c0d8;
+  background: var(--ui-hover);
+  color: var(--ui-text-muted);
 }
 
 .typeBtnActive {
-  background: #1e2d4a;
-  border-color: #5c7cfa;
-  color: #7aace0;
+  background: var(--ui-active-bg);
+  border-color: var(--ui-active-border);
+  color: var(--ui-active-text);
 }
 
 /* Category filter */
@@ -126,28 +126,28 @@
   gap: 3px;
   margin-bottom: 0;
   padding-bottom: 8px;
-  border-bottom: 1px solid #2a2a3a;
+  border-bottom: 1px solid var(--ui-border);
 }
 
 .catBtn {
   flex: 1 1 auto;
   padding: 3px 5px;
-  background: #181824;
-  border: 1px solid #30303e;
-  color: #60607a;
+  background: var(--ui-panel);
+  border: 1px solid var(--ui-border-subtle);
+  color: var(--ui-text-faint);
   font-size: 10px;
   border-radius: 3px;
   cursor: pointer;
-  transition: all 0.1s;
+  transition: background-color 0.1s, color 0.1s;
   white-space: nowrap;
 }
 
-.catBtn:hover { background: #1e1e2e; color: #a0a0c0; }
+.catBtn:hover { background: var(--ui-hover); color: var(--ui-text-muted); }
 
 .catBtnActive {
-  background: #1e2a40;
-  border-color: #4a6ad8;
-  color: #7090d0;
+  background: var(--ui-active-bg);
+  border-color: var(--ui-active-border);
+  color: var(--ui-active-text);
 }
 
 /* Shape grid */
@@ -161,25 +161,25 @@
 
 .shapeBtn {
   padding: 4px 2px;
-  background: #1a1a26;
-  border: 1px solid #2a2a3a;
-  color: #707090;
+  background: var(--ui-panel);
+  border: 1px solid var(--ui-border);
+  color: var(--ui-text-dim);
   font-size: 10px;
   border-radius: 3px;
   cursor: pointer;
-  transition: all 0.1s;
+  transition: background-color 0.1s, color 0.1s;
   text-align: center;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.shapeBtn:hover { background: #222234; color: #b0b0c8; }
+.shapeBtn:hover { background: var(--ui-hover); color: var(--ui-text-muted); }
 
 .shapeBtnActive {
-  background: #1e2d4a;
-  border-color: #5c7cfa;
-  color: #7aace0;
+  background: var(--ui-active-bg);
+  border-color: var(--ui-active-border);
+  color: var(--ui-active-text);
 }
 
 /* Fields */
@@ -198,7 +198,7 @@
 
 .fieldLabel {
   font-size: 11px;
-  color: #8080a0;
+  color: var(--ui-text-dim);
   flex: 1;
   cursor: ew-resize;
   user-select: none;
@@ -206,9 +206,9 @@
 
 .input {
   width: 80px;
-  background: #141420;
-  border: 1px solid #2a2a3a;
-  color: #c8c8dc;
+  background: var(--ui-input);
+  border: 1px solid var(--ui-border);
+  color: var(--ui-text);
   font-size: 11px;
   padding: 4px 6px;
   border-radius: 3px;
@@ -220,13 +220,13 @@
 }
 
 .input:focus {
-  border-color: #5c7cfa;
+  border-color: var(--ui-focus);
   cursor: text;
 }
 
 .hint {
   font-size: 10px;
-  color: #50506a;
+  color: var(--ui-text-faint);
   text-align: right;
   padding-top: 2px;
 }
@@ -241,16 +241,16 @@
 
 .nameLabel {
   font-size: 11px;
-  color: #8080a0;
+  color: var(--ui-text-dim);
   flex-shrink: 0;
   width: 36px;
 }
 
 .nameInput {
   flex: 1;
-  background: #141420;
-  border: 1px solid #2a2a3a;
-  color: #c8c8dc;
+  background: var(--ui-input);
+  border: 1px solid var(--ui-border);
+  color: var(--ui-text);
   font-size: 11px;
   padding: 5px 8px;
   border-radius: 3px;
@@ -260,11 +260,11 @@
 }
 
 .nameInput::placeholder {
-  color: #40405a;
+  color: var(--ui-text-faint);
 }
 
 .nameInput:focus {
-  border-color: #5c7cfa;
+  border-color: var(--ui-focus);
 }
 
 /* Actions */
@@ -276,33 +276,33 @@
 
 .cancelBtn {
   padding: 6px 14px;
-  background: #1a1a26;
-  border: 1px solid #3a3a4a;
-  color: #8888a8;
+  background: var(--ui-panel);
+  border: 1px solid var(--ui-border);
+  color: var(--ui-text-dim);
   font-size: 11px;
   border-radius: 4px;
   cursor: pointer;
-  transition: all 0.1s;
+  transition: background-color 0.1s, color 0.1s;
 }
 
 .cancelBtn:hover {
-  background: #222234;
-  color: #c0c0d8;
+  background: var(--ui-hover);
+  color: var(--ui-text-muted);
 }
 
 .addBtn {
   padding: 6px 18px;
-  background: #1e3a6a;
-  border: 1px solid #5c7cfa;
-  color: #7aace0;
+  background: var(--ui-active-bg);
+  border: 1px solid var(--ui-active-border);
+  color: var(--ui-active-text);
   font-size: 11px;
   font-weight: 600;
   border-radius: 4px;
   cursor: pointer;
-  transition: all 0.1s;
+  transition: background-color 0.1s, color 0.1s;
 }
 
 .addBtn:hover {
-  background: #234285;
-  color: #a0c8f0;
+  background: var(--ui-hover);
+  color: var(--ui-text);
 }

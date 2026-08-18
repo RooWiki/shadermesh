@@ -3,11 +3,12 @@
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background: #141418;
-  color: #c8c8dc;
+  background: var(--ui-bg);
+  color: var(--ui-text);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   overflow: hidden;
   user-select: none;
+  transition: background-color 0.25s ease, color 0.25s ease;
 }
 
 .toolbar {
@@ -42,9 +43,9 @@
 .resizeHandle {
   width: 4px;
   flex-shrink: 0;
-  background: #2a2a36;
+  background: var(--ui-border-subtle);
   cursor: ew-resize;
-  transition: background 0.15s;
+  transition: background-color 0.15s;
   position: relative;
   z-index: 10;
 }
@@ -57,5 +58,5 @@
 
 .resizeHandle:hover,
 .resizeHandle:active {
-  background: #5c7cfa;
+  background: var(--ui-accent);
 }

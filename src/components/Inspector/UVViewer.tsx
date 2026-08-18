@@ -9,6 +9,10 @@ interface Props {
 
 const CANVAS_SIZE = 512
 
+function getCSSVar(name: string): string {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim()
+}
+
 export function UVViewer({ meshData, selectedVertexIndices, selectedFaceIndex }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
@@ -29,26 +33,28 @@ export function UVViewer({ meshData, selectedVertexIndices, selectedFaceIndex }:
     ]
 
     ctx.clearRect(0, 0, S, S)
-    ctx.fillStyle = '#12121a'
+    ctx.fillStyle = getCSSVar('--uv-bg')
     ctx.fillRect(0, 0, S, S)
 
     // Checkerboard in the 0-1 tile
     const checks = 8
     const cs = dim / checks
+    const checkerA = getCSSVar('--uv-checker-a')
+    const checkerB = getCSSVar('--uv-checker-b')
     for (let cy = 0; cy < checks; cy++) {
       for (let cx = 0; cx < checks; cx++) {
-        ctx.fillStyle = (cx + cy) % 2 === 0 ? '#1c1c28' : '#222232'
+        ctx.fillStyle = (cx + cy) % 2 === 0 ? checkerA : checkerB
         ctx.fillRect(pad + cx * cs, pad + cy * cs, cs, cs)
       }
     }
 
     // 0-1 boundary
-    ctx.strokeStyle = '#44445a'
+    ctx.strokeStyle = getCSSVar('--uv-grid')
     ctx.lineWidth = 1
     ctx.strokeRect(pad + 0.5, pad + 0.5, dim - 1, dim - 1)
 
     // Grid lines at 0.25 intervals
-    ctx.strokeStyle = '#28283a'
+    ctx.strokeStyle = getCSSVar('--uv-border')
     ctx.lineWidth = 0.5
     for (let g = 1; g < 4; g++) {
       const t = g / 4
@@ -68,14 +74,14 @@ export function UVViewer({ meshData, selectedVertexIndices, selectedFaceIndex }:
       const [ax, ay] = toCanvas(uvs[a*2], uvs[a*2+1])
       const [bx, by] = toCanvas(uvs[b*2], uvs[b*2+1])
       const [cx2, cy2] = toCanvas(uvs[c*2], uvs[c*2+1])
-      ctx.fillStyle = 'rgba(255, 140, 0, 0.25)'
+      ctx.fillStyle = getCSSVar('--uv-face-hover')
       ctx.beginPath()
       ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.lineTo(cx2, cy2)
       ctx.closePath(); ctx.fill()
     }
 
     // All UV edges
-    ctx.strokeStyle = '#4a6aaa'
+    ctx.strokeStyle = getCSSVar('--uv-edge')
     ctx.lineWidth = 0.75
     ctx.beginPath()
     for (let t = 0; t < triCount; t++) {
@@ -91,20 +97,22 @@ export function UVViewer({ meshData, selectedVertexIndices, selectedFaceIndex }:
 
     // All UV vertices (small dots)
     const vCount = uvs.length / 2
-    ctx.fillStyle = '#33446688'
+    ctx.fillStyle = getCSSVar('--uv-face-sel')
     for (let i = 0; i < vCount; i++) {
       const [px, py] = toCanvas(uvs[i*2], uvs[i*2+1])
       ctx.beginPath(); ctx.arc(px, py, 1.5, 0, Math.PI * 2); ctx.fill()
     }
 
     // Selected vertex UV dots
+    const vertColor = getCSSVar('--uv-vert')
+    const vertStroke = getCSSVar('--uv-vert-stroke')
     for (const vi of selectedVertexIndices) {
       const u = uvs[vi * 2]
       const v = uvs[vi * 2 + 1]
       const [px, py] = toCanvas(u, v)
-      ctx.fillStyle = '#ffdd00'
+      ctx.fillStyle = vertColor
       ctx.beginPath(); ctx.arc(px, py, 4.5, 0, Math.PI * 2); ctx.fill()
-      ctx.strokeStyle = '#000'
+      ctx.strokeStyle = vertStroke
       ctx.lineWidth = 1
       ctx.stroke()
     }
@@ -114,7 +122,7 @@ export function UVViewer({ meshData, selectedVertexIndices, selectedFaceIndex }:
       const vi = selectedVertexIndices[0]
       const u = uvs[vi * 2]
       const v = uvs[vi * 2 + 1]
-      ctx.fillStyle = '#ffdd00'
+      ctx.fillStyle = vertColor
       ctx.font = '20px monospace'
       ctx.fillText(`${u.toFixed(3)}, ${v.toFixed(3)}`, pad, S - 6)
     }

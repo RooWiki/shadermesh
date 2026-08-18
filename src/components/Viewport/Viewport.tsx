@@ -276,8 +276,8 @@ export function Viewport() {
             top: dragBox.y,
             width: dragBox.w,
             height: dragBox.h,
-            border: '1px solid rgba(92, 124, 250, 0.85)',
-            background: 'rgba(92, 124, 250, 0.08)',
+            border: '1px solid var(--ui-select-box-border)',
+            background: 'var(--ui-select-box-fill)',
             pointerEvents: 'none',
             zIndex: 1000,
           }}

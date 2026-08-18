@@ -5,6 +5,7 @@ import { AddObjectModal } from './AddObjectModal'
 import { pickTextFile } from '../../io/fileUtils'
 import { importOBJ } from '../../io/importOBJ'
 import { importJSON } from '../../io/importJSON'
+import { useTheme } from '../../hooks/useTheme'
 import styles from './Toolbar.module.css'
 
 const WIREFRAME_ICONS = { tri: '△', quad: '◻' } as const
@@ -41,6 +42,7 @@ export function Toolbar() {
   const activeTool = useSceneStore(s => s.activeTool)
   const setActiveTool = useSceneStore(s => s.setActiveTool)
   const [showAddModal, setShowAddModal] = useState(true)
+  const { theme, toggleTheme } = useTheme()
 
   const handleImport = async () => {
     try {
@@ -172,7 +174,13 @@ export function Toolbar() {
 
         <div className={styles.spacer} />
 
-        <div className={styles.statusLabel} />
+        <button
+          className={styles.themeBtn}
+          onClick={toggleTheme}
+          title={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+        >
+          {theme === 'dark' ? '☀' : '☾'}
+        </button>
       </div>
 
       {showAddModal && <AddObjectModal onClose={() => setShowAddModal(false)} />}

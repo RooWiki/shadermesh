@@ -2,9 +2,10 @@
   width: 100%;
   height: 100%;
   overflow-y: auto;
-  background: #1c1c22;
+  background: var(--ui-panel);
   display: flex;
   flex-direction: column;
+  transition: background-color 0.25s ease;
 }
 
 .header {
@@ -12,16 +13,16 @@
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.1em;
-  color: #6a6a80;
+  color: var(--ui-text-dim);
   text-transform: uppercase;
-  border-bottom: 1px solid #2a2a36;
+  border-bottom: 1px solid var(--ui-border-subtle);
   flex-shrink: 0;
 }
 
 .empty {
   padding: 16px 12px;
   font-size: 11px;
-  color: #44445a;
+  color: var(--ui-text-faint);
   text-align: center;
 }
 
@@ -31,18 +32,18 @@
   gap: 6px;
   padding: 8px 12px;
   font-size: 12px;
-  color: #d0d0e4;
+  color: var(--ui-text);
   font-weight: 600;
-  border-bottom: 1px solid #2a2a36;
+  border-bottom: 1px solid var(--ui-border-subtle);
 }
 
 .renameInput {
   flex: 1;
   min-width: 0;
-  background: #111120;
-  border: 1px solid #5c7cfa;
+  background: var(--ui-input);
+  border: 1px solid var(--ui-focus);
   border-radius: 3px;
-  color: #e0e0f4;
+  color: var(--ui-text);
   font-size: 12px;
   font-family: inherit;
   font-weight: 600;
@@ -52,12 +53,12 @@
 
 .objectIcon {
   font-size: 10px;
-  color: #5a7aaa;
+  color: var(--ui-text-dim);
 }
 
 /* Sections */
 .section {
-  border-bottom: 1px solid #2a2a36;
+  border-bottom: 1px solid var(--ui-border-subtle);
   padding: 8px 0;
 }
 
@@ -66,7 +67,7 @@
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.08em;
-  color: #8080a0;
+  color: var(--ui-text-muted);
   text-transform: uppercase;
 }
 
@@ -75,7 +76,7 @@
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.06em;
-  color: #60607a;
+  color: var(--ui-text-dim);
   text-transform: uppercase;
 }
 
@@ -88,7 +89,7 @@
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.04em;
-  color: #7070a0;
+  color: var(--ui-text-dim);
   text-transform: uppercase;
   margin-bottom: 4px;
 }
@@ -105,12 +106,12 @@
   min-width: 0;
   border-radius: 3px;
   overflow: hidden;
-  border: 1px solid #2a2a3a;
-  background: #111120;
+  border: 1px solid var(--ui-border);
+  background: var(--ui-input);
 }
 
 .axisField:focus-within {
-  border-color: #5c7cfa;
+  border-color: var(--ui-focus);
 }
 
 .axisTag {
@@ -121,23 +122,23 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #1e1e2e;
-  border-right: 1px solid #2a2a3a;
+  background: var(--ui-surface);
+  border-right: 1px solid var(--ui-border);
   cursor: ew-resize;
   user-select: none;
 }
 
-.axisX { color: #ff6060; background: #2a1515; border-right-color: #3a2020; }
-.axisY { color: #50dd70; background: #152815; border-right-color: #203520; }
-.axisZ { color: #5088ff; background: #15152a; border-right-color: #202040; }
-.axisA { color: #a0a0a0; background: #1e1e1e; border-right-color: #2a2a2a; }
+.axisX { color: var(--axis-x); background: var(--axis-x-bg); border-right-color: var(--axis-x-border); }
+.axisY { color: var(--axis-y); background: var(--axis-y-bg); border-right-color: var(--axis-y-border); }
+.axisZ { color: var(--axis-z); background: var(--axis-z-bg); border-right-color: var(--axis-z-border); }
+.axisA { color: var(--axis-a); background: var(--axis-a-bg); border-right-color: var(--axis-a-border); }
 
 .numInput {
   width: 100%;
   min-width: 0;
   background: transparent;
   border: none;
-  color: #e0e0f4;
+  color: var(--ui-text);
   font-size: 12px;
   padding: 6px 5px 6px 3px;
   font-family: 'JetBrains Mono', 'Fira Code', monospace;
@@ -157,7 +158,7 @@
 }
 
 .numInputReadOnly {
-  color: #7070a0;
+  color: var(--ui-text-dim);
   cursor: default !important;
 }
 
@@ -170,22 +171,22 @@
 .actionBtn {
   flex: 1;
   padding: 4px 0;
-  background: #1a1a2e;
-  border: 1px solid #2a2a40;
-  color: #8080b0;
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-border);
+  color: var(--ui-text-dim);
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.04em;
   border-radius: 3px;
   cursor: pointer;
-  transition: all 0.1s;
+  transition: background-color 0.1s, border-color 0.1s, color 0.1s;
   text-transform: uppercase;
 }
 
 .actionBtn:hover {
-  background: #22223a;
-  border-color: #5c7cfa;
-  color: #a0a0d0;
+  background: var(--ui-hover);
+  border-color: var(--ui-focus);
+  color: var(--ui-text-muted);
 }
 
 /* Stat grid */
@@ -202,35 +203,35 @@
 }
 
 .statKey {
-  color: #7070a0;
+  color: var(--ui-text-dim);
 }
 
 .statVal {
-  color: #c0c0d8;
+  color: var(--ui-text-muted);
   font-family: 'JetBrains Mono', 'Fira Code', monospace;
 }
 
 .attrOn {
-  color: #51cf66;
+  color: var(--ui-attr-on);
 }
 
 .attrOff {
-  color: #44445a;
+  color: var(--ui-text-faint);
 }
 
 .totalRow {
   margin-top: 4px;
   padding-top: 4px;
-  border-top: 1px solid #2a2a36;
+  border-top: 1px solid var(--ui-border-subtle);
 }
 
 .totalRow .statKey {
-  color: #9090b0;
+  color: var(--ui-text-muted);
   font-weight: 600;
 }
 
 .totalRow .statVal {
-  color: #d0d0e8;
+  color: var(--ui-text);
   font-weight: 600;
 }
 
@@ -245,7 +246,7 @@
 
 .paramLabel {
   font-size: 11px;
-  color: #7070a0;
+  color: var(--ui-text-dim);
   flex-shrink: 0;
   cursor: ew-resize;
   user-select: none;
@@ -254,10 +255,10 @@
 .paramInput {
   width: 72px;
   text-align: right;
-  background: #111120;
-  border: 1px solid #2a2a3a;
+  background: var(--ui-input);
+  border: 1px solid var(--ui-border);
   border-radius: 3px;
-  color: #e0e0f4;
+  color: var(--ui-text);
   font-size: 12px;
   padding: 3px 5px;
   font-family: 'JetBrains Mono', 'Fira Code', monospace;
@@ -267,7 +268,7 @@
 }
 
 .paramInput:focus {
-  border-color: #5c7cfa;
+  border-color: var(--ui-focus);
   cursor: text;
 }
 
@@ -275,10 +276,10 @@
 .uvSelect {
   flex-shrink: 0;
   width: 120px;
-  background: #111120;
-  border: 1px solid #2a2a3a;
+  background: var(--ui-input);
+  border: 1px solid var(--ui-border);
   border-radius: 3px;
-  color: #e0e0f4;
+  color: var(--ui-text);
   font-size: 11px;
   font-family: inherit;
   padding: 3px 4px;
@@ -287,11 +288,11 @@
 }
 
 .uvSelect:focus {
-  border-color: #5c7cfa;
+  border-color: var(--ui-focus);
 }
 
 .uvSelect option {
-  background: #1a1a2e;
+  background: var(--ui-surface);
 }
 
 .uvRow2 {
@@ -308,25 +309,25 @@
 .uvToggleBtn {
   flex: 1;
   padding: 4px 0;
-  background: #1a1a2e;
-  border: 1px solid #2a2a40;
-  color: #6060a0;
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-border);
+  color: var(--ui-text-faint);
   font-size: 10px;
   font-weight: 600;
   border-radius: 3px;
   cursor: pointer;
-  transition: all 0.1s;
+  transition: background-color 0.1s, border-color 0.1s, color 0.1s;
 }
 
 .uvToggleBtn:hover {
-  border-color: #5c7cfa;
-  color: #a0a0d0;
+  border-color: var(--ui-focus);
+  color: var(--ui-text-muted);
 }
 
 .uvToggleOn {
-  background: #1e2a48;
-  border-color: #5c7cfa;
-  color: #7aacf8;
+  background: var(--ui-active-bg);
+  border-color: var(--ui-active-border);
+  color: var(--ui-active-text);
 }
 
 /* Spacer pushes export to bottom */
@@ -338,9 +339,9 @@
 .exportPanel {
   flex-shrink: 0;
   margin: 8px;
-  border: 1px solid #4a6fa8;
+  border: 1px solid var(--ui-export-border);
   border-radius: 6px;
-  background: #161824;
+  background: var(--ui-export-bg);
   overflow: hidden;
 }
 
@@ -350,7 +351,7 @@
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: #7aa0d4;
+  color: var(--ui-export-title);
 }
 
 .exportRow {
@@ -362,27 +363,27 @@
 .exportBtn {
   flex: 1;
   padding: 6px 0;
-  background: #1e2a42;
-  border: 1px solid #3a5a8a;
-  color: #7aaae8;
+  background: var(--ui-export-btn-bg);
+  border: 1px solid var(--ui-export-btn-border);
+  color: var(--ui-export-btn-text);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.06em;
   border-radius: 4px;
   cursor: pointer;
   text-transform: uppercase;
-  transition: all 0.1s;
+  transition: background-color 0.1s, border-color 0.1s, color 0.1s;
 }
 
 .exportBtn:hover {
-  background: #2a3a5a;
-  border-color: #6a9ad8;
-  color: #a0c8ff;
+  background: var(--ui-export-btn-hover-bg);
+  border-color: var(--ui-export-btn-hover-border);
+  color: var(--ui-export-btn-hover-text);
 }
 
 /* UV Viewer */
 .uvViewer {
-  border-top: 1px solid #2a2a36;
+  border-top: 1px solid var(--ui-border-subtle);
   flex-shrink: 0;
 }
 

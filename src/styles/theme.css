@@ -1,0 +1,216 @@
+/* iOS systemGray palette — Dark theme (default) */
+[data-theme="dark"] {
+  /* Raw palette */
+  --sg6: #1C1C1E;
+  --sg5: #2C2C2E;
+  --sg4: #3A3A3C;
+  --sg3: #48484A;
+  --sg2: #636366;
+  --sg:  #8E8E93;
+  --text: #F2F2F7;
+
+  /* Semantic tokens */
+  --ui-bg:          #141416;
+  --ui-panel:       #1C1C1E;
+  --ui-surface:     #2C2C2E;
+  --ui-input:       #141416;
+  --ui-input-alt:   #1C1C1E;
+  --ui-border:      #3A3A3C;
+  --ui-border-subtle: #2C2C2E;
+  --ui-hover:       #3A3A3C;
+  --ui-text:        #F2F2F7;
+  --ui-text-muted:  #8E8E93;
+  --ui-text-dim:    #636366;
+  --ui-text-faint:  #48484A;
+  --ui-accent:      #8E8E93;
+  --ui-focus:       #8E8E93;
+  --ui-selected-bg: #3A3A3C;
+  --ui-selected-text: #F2F2F7;
+
+  /* Active / toggle-on */
+  --ui-active-bg:   #3A3A3C;
+  --ui-active-border: #8E8E93;
+  --ui-active-text: #F2F2F7;
+
+  /* Scrollbar */
+  --ui-scrollbar:   #3A3A3C;
+  --ui-scrollbar-hover: #48484A;
+  --ui-scrollbar-track: #1C1C1E;
+
+  /* Viewport overlays */
+  --ui-panel-divider: #2C2C2E;
+  --ui-label-color:   #48484A;
+  --ui-label-hover:   #8E8E93;
+  --ui-mode-color:    #f0a050;
+  --ui-mode-bg:       rgba(0,0,0,0.55);
+  --ui-mode-border:   rgba(240,160,80,0.3);
+  --ui-shortcut-color: #636366;
+  --ui-shortcut-bg:    rgba(0,0,0,0.4);
+
+  /* Selection box */
+  --ui-select-box-border: rgba(142,142,147,0.85);
+  --ui-select-box-fill:   rgba(142,142,147,0.08);
+
+  /* UV panel */
+  --ui-uv-bg:      #1C1C1E;
+  --ui-uv-header:  #2C2C2E;
+  --ui-uv-border:  #3A3A3C;
+  --ui-uv-text:    #636366;
+  --ui-uv-toggle:  #48484A;
+
+  /* Export panel */
+  --ui-export-border: #48484A;
+  --ui-export-bg:     #1C1C1E;
+  --ui-export-title:  #8E8E93;
+  --ui-export-btn-bg: #2C2C2E;
+  --ui-export-btn-border: #48484A;
+  --ui-export-btn-text: #8E8E93;
+  --ui-export-btn-hover-bg: #3A3A3C;
+  --ui-export-btn-hover-border: #636366;
+  --ui-export-btn-hover-text: #F2F2F7;
+
+  /* Brand */
+  --ui-brand: #8E8E93;
+
+  /* Preview canvas */
+  --ui-preview-bg: #141416;
+
+  /* UV viewer canvas */
+  --uv-bg:           #141416;
+  --uv-checker-a:    #1C1C1E;
+  --uv-checker-b:    #222224;
+  --uv-grid:         #3A3A3C;
+  --uv-border:       #2C2C2E;
+  --uv-face-hover:   rgba(255,140,0,0.25);
+  --uv-edge:         #48484A;
+  --uv-face-sel:     #33445588;
+  --uv-vert:         #ffdd00;
+  --uv-vert-stroke:  #000;
+
+  /* Preserve axis colors */
+  --axis-x: #ff6060;
+  --axis-x-bg: #2a1515;
+  --axis-x-border: #3a2020;
+  --axis-y: #50dd70;
+  --axis-y-bg: #152815;
+  --axis-y-border: #203520;
+  --axis-z: #5088ff;
+  --axis-z-bg: #15152a;
+  --axis-z-border: #202040;
+  --axis-a: #a0a0a0;
+  --axis-a-bg: #1e1e1e;
+  --axis-a-border: #2a2a2a;
+
+  /* Attr status */
+  --ui-attr-on:  #51cf66;
+  --ui-attr-off: #48484A;
+
+  /* Danger */
+  --ui-danger: #ff6666;
+
+  /* WIP badge */
+  --ui-wip-color: #f0a050;
+  --ui-wip-bg: rgba(240,160,80,0.1);
+  --ui-wip-border: rgba(240,160,80,0.2);
+}
+
+/* iOS systemGray palette — Light theme */
+[data-theme="light"] {
+  --sg6: #F2F2F7;
+  --sg5: #E5E5EA;
+  --sg4: #D1D1D6;
+  --sg3: #C7C7CC;
+  --sg2: #AEAEB2;
+  --sg:  #8E8E93;
+  --text: #1C1C1E;
+
+  --ui-bg:          #F2F2F7;
+  --ui-panel:       #FFFFFF;
+  --ui-surface:     #E5E5EA;
+  --ui-input:       #FFFFFF;
+  --ui-input-alt:   #F2F2F7;
+  --ui-border:      #C7C7CC;
+  --ui-border-subtle: #D1D1D6;
+  --ui-hover:       #E5E5EA;
+  --ui-text:        #1C1C1E;
+  --ui-text-muted:  #636366;
+  --ui-text-dim:    #8E8E93;
+  --ui-text-faint:  #AEAEB2;
+  --ui-accent:      #636366;
+  --ui-focus:       #636366;
+  --ui-selected-bg: #D1D1D6;
+  --ui-selected-text: #1C1C1E;
+
+  --ui-active-bg:   #D1D1D6;
+  --ui-active-border: #636366;
+  --ui-active-text: #1C1C1E;
+
+  --ui-scrollbar:   #C7C7CC;
+  --ui-scrollbar-hover: #AEAEB2;
+  --ui-scrollbar-track: #E5E5EA;
+
+  --ui-panel-divider: #D1D1D6;
+  --ui-label-color:   #AEAEB2;
+  --ui-label-hover:   #636366;
+  --ui-mode-color:    #c07800;
+  --ui-mode-bg:       rgba(255,255,255,0.8);
+  --ui-mode-border:   rgba(192,120,0,0.3);
+  --ui-shortcut-color: #8E8E93;
+  --ui-shortcut-bg:    rgba(255,255,255,0.7);
+
+  --ui-select-box-border: rgba(99,99,102,0.85);
+  --ui-select-box-fill:   rgba(99,99,102,0.08);
+
+  --ui-uv-bg:      #FFFFFF;
+  --ui-uv-header:  #F2F2F7;
+  --ui-uv-border:  #D1D1D6;
+  --ui-uv-text:    #8E8E93;
+  --ui-uv-toggle:  #AEAEB2;
+
+  --ui-export-border: #AEAEB2;
+  --ui-export-bg:     #FFFFFF;
+  --ui-export-title:  #636366;
+  --ui-export-btn-bg: #E5E5EA;
+  --ui-export-btn-border: #C7C7CC;
+  --ui-export-btn-text: #636366;
+  --ui-export-btn-hover-bg: #D1D1D6;
+  --ui-export-btn-hover-border: #8E8E93;
+  --ui-export-btn-hover-text: #1C1C1E;
+
+  --ui-brand: #636366;
+
+  --ui-preview-bg: #E5E5EA;
+
+  --uv-bg:           #F2F2F7;
+  --uv-checker-a:    #E5E5EA;
+  --uv-checker-b:    #D8D8DC;
+  --uv-grid:         #C7C7CC;
+  --uv-border:       #D1D1D6;
+  --uv-face-hover:   rgba(255,140,0,0.25);
+  --uv-edge:         #AEAEB2;
+  --uv-face-sel:     #44556688;
+  --uv-vert:         #ffdd00;
+  --uv-vert-stroke:  #000;
+
+  --axis-x: #ff6060;
+  --axis-x-bg: #ffe8e8;
+  --axis-x-border: #ffd0d0;
+  --axis-y: #30bb50;
+  --axis-y-bg: #e8f8ec;
+  --axis-y-border: #c8ecd2;
+  --axis-z: #3366ee;
+  --axis-z-bg: #e8eeff;
+  --axis-z-border: #c8d8ff;
+  --axis-a: #606060;
+  --axis-a-bg: #e8e8e8;
+  --axis-a-border: #d0d0d0;
+
+  --ui-attr-on:  #2ab34a;
+  --ui-attr-off: #C7C7CC;
+
+  --ui-danger: #dd4444;
+
+  --ui-wip-color: #c07800;
+  --ui-wip-bg: rgba(192,120,0,0.1);
+  --ui-wip-border: rgba(192,120,0,0.2);
+}
