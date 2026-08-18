@@ -244,40 +244,24 @@ export function createCrescent(p: CrescentParams = {}): MeshData {
   const R = outerRadius, r = innerRadius, d = offset
   const seg = Math.max(8, segments)
 
-  // Find intersection angles of two circles: (0,0,R) and (d,0,r)
-  const cosA = (R * R + d * d - r * r) / (2 * R * d)
-  const capped = Math.min(1, Math.max(-1, cosA))
-  const halfAngle = Math.acos(capped)
+  const cosA = Math.min(1, Math.max(-1, (R*R + d*d - r*r) / (2*R*d)))
+  const halfAngle = Math.acos(cosA)
 
-  const a0outer = halfAngle        // angle on outer where circles intersect
-  const a1outer = Math.PI * 2 - halfAngle
+  const cosB = Math.min(1, Math.max(-1, (r*r + d*d - R*R) / (2*r*d)))
+  const halfAngleB = Math.acos(cosB)
 
-  // Inner circle intersection angle (measured from its own center at (d,0))
-  const cosB = (r * r + d * d - R * R) / (2 * r * d)
-  const cappedB = Math.min(1, Math.max(-1, cosB))
-  const halfAngleB = Math.acos(cappedB)
-  const a0inner = Math.PI - halfAngleB
-  const a1inner = Math.PI + halfAngleB
-
-  // Build outer arc (from a0outer to a1outer going CCW)
-  const outerArcPts: Pt[] = []
-  const nOuter = Math.round(seg * (Math.PI * 2 - 2 * halfAngle) / (Math.PI * 2))
-  for (let i = 0; i <= nOuter; i++) {
-    const a = a0outer + (i / nOuter) * (Math.PI * 2 - 2 * halfAngle)
-    outerArcPts.push([R * Math.cos(a), R * Math.sin(a)])
+  // Build parallel outer and inner arcs, paired by parameter t → clean quad strip
+  const outerPts: Pt[] = []
+  const innerPts: Pt[] = []
+  for (let i = 0; i <= seg; i++) {
+    const t = i / seg
+    const ao = halfAngle + t * (Math.PI * 2 - 2 * halfAngle)
+    outerPts.push([R * Math.cos(ao), R * Math.sin(ao)])
+    const ai = (Math.PI + halfAngleB) - t * 2 * halfAngleB
+    innerPts.push([d + r * Math.cos(ai), r * Math.sin(ai)])
   }
 
-  // Build inner arc (from a1inner to a0inner)
-  const innerArcPts: Pt[] = []
-  const nInner = Math.round(seg * 2 * halfAngleB / (Math.PI * 2))
-  const innerRange = -2 * halfAngleB
-  for (let i = 0; i <= nInner; i++) {
-    const a = a1inner + (i / nInner) * innerRange
-    innerArcPts.push([d + r * Math.cos(a), r * Math.sin(a)])
-  }
-
-  const pts = [...outerArcPts, ...innerArcPts]
-  return buildFilled(pts)
+  return buildRingStrip(outerPts, innerPts, false)
 }
 
 export interface SpiralParams { innerRadius?: number; outerRadius?: number; turns?: number; width?: number; segments?: number; rise?: number }
