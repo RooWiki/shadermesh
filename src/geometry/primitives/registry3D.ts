@@ -8,7 +8,7 @@ import { createCapsule } from './createCapsule'
 import { createPlane } from './createPlane'
 import { createUVSphere, createIcosphere, createHemisphere, createDome, createEllipsoid, createTube, createFrustum } from './createCurved3D'
 import { createPrism, createPyramid, createTetrahedron, createTruncatedPyramid, createOctahedron, createIcosahedron, createDodecahedron, createDiamond, createIrregularPolyhedron } from './createPolyhedra3D'
-import { createWedge3D, createSpike, createShard, createCrystal, createRibbon3D, createArc3D, createRing3D } from './createVFX3D'
+import { createWedge3D, createSpike, createShard, createCrystal, createRibbon3D, createArc3D, createRing3D, createStar3D } from './createVFX3D'
 
 export type Category3D = 'basic' | 'curved' | 'prisms' | 'pyramids' | 'polyhedra' | 'vfx'
 
@@ -24,7 +24,7 @@ export type Primitive3DType =
   // Polyhedra
   | 'octahedron' | 'dodecahedron' | 'icosahedron' | 'diamond' | 'polyIrregular'
   // VFX
-  | 'wedge3d' | 'spike' | 'shard' | 'crystal' | 'ribbon3d' | 'arc3d' | 'ring3d'
+  | 'wedge3d' | 'spike' | 'shard' | 'crystal' | 'ribbon3d' | 'arc3d' | 'ring3d' | 'star3d'
 
 export interface Field3D {
   key: string
@@ -281,6 +281,12 @@ export const PRIMITIVE_3D_REGISTRY: Record<Primitive3DType, Prim3DConfig> = {
     fields: [f('outerRadius','Outer Radius',0.5,0.05,3,0.001), f('innerRadius','Inner Radius',0.3,0.05,3,0.001), f('height','Height',0.1,0.02,3,0.001), f('segments','Segments',32,1,0,3,true)],
     create: p => createRing3D(p),
   },
+  star3d: {
+    label: 'Star', category: 'vfx',
+    defaults: { points: 5, outerRadius: 0.5, innerRadius: 0.22, depth: 0.2 },
+    fields: [f('points','Points',5,1,0,3,true), f('outerRadius','Outer Radius',0.5,0.05,3,0.001), f('innerRadius','Inner Radius',0.22,0.02,3,0.001), f('depth','Depth',0.2,0.02,3,0.001)],
+    create: p => createStar3D(p),
+  },
 }
 
 export const CATEGORIES_3D: Category3D[] = ['basic', 'curved', 'prisms', 'pyramids', 'polyhedra', 'vfx']
@@ -296,7 +302,7 @@ export const TYPES_BY_CATEGORY_3D: Record<Category3D, Primitive3DType[]> = {
   prisms:    ['prism3','prism4','prism5','prism6','prism7','prism8'],
   pyramids:  ['tetrahedron','pyramidSquare','pyramidPenta','pyramidHexa','pyramidTrunc'],
   polyhedra: ['octahedron','dodecahedron','icosahedron','diamond','polyIrregular'],
-  vfx:       ['wedge3d','spike','shard','crystal','ribbon3d','arc3d','ring3d'],
+  vfx:       ['wedge3d','spike','shard','crystal','ribbon3d','arc3d','ring3d','star3d'],
 }
 
 // Quick-access row (top 6 classics)

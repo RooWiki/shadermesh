@@ -310,6 +310,62 @@ export function createArc3D(p: Record<string, number> = {}): MeshData {
   }
 }
 
+// Star3D: extruded star polygon
+export function createStar3D(p: Record<string, number> = {}): MeshData {
+  const points = Math.max(3, Math.round(p.points ?? 5))
+  const outerRadius = Math.max(0.01, p.outerRadius ?? 0.5)
+  const innerRadius = Math.max(0.005, Math.min(outerRadius - 0.005, p.innerRadius ?? 0.22))
+  const depth = Math.max(0.001, p.depth ?? 0.2)
+  const halfD = depth / 2
+  const n = points * 2
+
+  const px: number[] = [], pz: number[] = []
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * Math.PI * 2 - Math.PI / 2
+    const r = i % 2 === 0 ? outerRadius : innerRadius
+    px.push(r * Math.cos(a)); pz.push(r * Math.sin(a))
+  }
+
+  const pos: number[] = [], nrm: number[] = [], uvArr: number[] = [], idx: number[] = []
+
+  // Top cap (+Y normal)
+  const tc = pos.length / 3
+  pos.push(0, halfD, 0); nrm.push(0, 1, 0); uvArr.push(0.5, 0.5)
+  for (let i = 0; i < n; i++) {
+    pos.push(px[i], halfD, pz[i]); nrm.push(0, 1, 0)
+    uvArr.push(0.5 + px[i] / (outerRadius * 2), 0.5 + pz[i] / (outerRadius * 2))
+  }
+  for (let i = 0; i < n; i++) idx.push(tc, tc + 1 + (i + 1) % n, tc + 1 + i)
+
+  // Bottom cap (-Y normal)
+  const bc = pos.length / 3
+  pos.push(0, -halfD, 0); nrm.push(0, -1, 0); uvArr.push(0.5, 0.5)
+  for (let i = 0; i < n; i++) {
+    pos.push(px[i], -halfD, pz[i]); nrm.push(0, -1, 0)
+    uvArr.push(0.5 + px[i] / (outerRadius * 2), 0.5 + pz[i] / (outerRadius * 2))
+  }
+  for (let i = 0; i < n; i++) idx.push(bc, bc + 1 + i, bc + 1 + (i + 1) % n)
+
+  // Side faces
+  for (let i = 0; i < n; i++) {
+    const j = (i + 1) % n
+    const x0 = px[i], z0 = pz[i], x1 = px[j], z1 = pz[j]
+    const dx = x1 - x0, dz = z1 - z0
+    const nl = Math.sqrt(dz * dz + dx * dx) || 1
+    const nx = dz / nl, nz = -dx / nl
+    const b = pos.length / 3
+    pos.push(x0, halfD, z0, x1, halfD, z1, x1, -halfD, z1, x0, -halfD, z0)
+    for (let v = 0; v < 4; v++) nrm.push(nx, 0, nz)
+    uvArr.push(0, 1, 1, 1, 1, 0, 0, 0)
+    idx.push(b, b + 1, b + 2, b, b + 2, b + 3)
+  }
+
+  return {
+    positions: new Float32Array(pos), normals: new Float32Array(nrm),
+    uvs: new Float32Array(uvArr), indices: new Uint32Array(idx),
+  }
+}
+
 // Ring3D: washer/ring with height (short tube)
 export function createRing3D(p: Record<string, number> = {}): MeshData {
   const outerR = Math.max(0.01, p.outerRadius ?? 0.5)
