@@ -5,6 +5,7 @@ import type { MeshObject } from '../core/MeshObject'
 import type { MeshData } from '../core/MeshData'
 import type { ActiveTool, EditorMode, WireframeMode } from '../state/sceneStore'
 import { meshDataToBufferGeometry } from './MeshRenderer'
+import { DEFAULT_MESH_COLOR } from '../core/defaultMeshColor'
 
 type SelectCallback = (id: string | null) => void
 type SelectVerticesCallback = (indices: number[]) => void
@@ -212,12 +213,12 @@ export class SceneManager {
     this.scene.add(this.gridHelper)
     this.scene.add(new THREE.AxesHelper(0.5))
 
-    this.defaultMat = new THREE.MeshPhongMaterial({ color: 0x5a7cba, shininess: 18, specular: 0x223355 })
+    this.defaultMat = new THREE.MeshPhongMaterial({ color: DEFAULT_MESH_COLOR, shininess: 18, specular: 0x553344 })
     this.selectedMat = new THREE.MeshPhongMaterial({ color: 0x7aace0, emissive: 0x112233, emissiveIntensity: 0.3, shininess: 18, specular: 0x334466 })
     this.vcMat = new THREE.MeshBasicMaterial({ vertexColors: true })
     this.uvCheckerTex = makeUVCheckerTexture()
     this.uvCheckerMat = new THREE.MeshBasicMaterial({ map: this.uvCheckerTex, side: THREE.DoubleSide })
-    this.wireframeMat = new THREE.LineBasicMaterial({ color: 0x2244aa, transparent: true, opacity: 0.4 })
+    this.wireframeMat = new THREE.LineBasicMaterial({ color: 0xbb1045, transparent: true, opacity: 0.4 })
     this.selectedWireframeMat = new THREE.LineBasicMaterial({ color: 0xf0a050, transparent: true, opacity: 0.8 })
     this.faceHighlightMat = new THREE.MeshBasicMaterial({
       color: 0xff8800,

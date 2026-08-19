@@ -2,6 +2,7 @@ import { useRef, useEffect } from 'react'
 import * as THREE from 'three'
 import type { MeshData } from '../../core/MeshData'
 import { meshDataToBufferGeometry } from '../../viewport/MeshRenderer'
+import { DEFAULT_MESH_COLOR } from '../../core/defaultMeshColor'
 import styles from './PrimitivePreview.module.css'
 
 interface Props {
@@ -34,23 +35,23 @@ export function PrimitivePreview({ meshData, height = 140 }: Props) {
     const scene = new THREE.Scene()
     const camera = new THREE.PerspectiveCamera(40, w / h, 0.001, 500)
 
-    const ambient = new THREE.AmbientLight(0x6070b0, 2)
+    const ambient = new THREE.AmbientLight(0xffffff, 1.0)
     scene.add(ambient)
     const sun = new THREE.DirectionalLight(0xffffff, 3)
     sun.position.set(3, 5, 4)
     scene.add(sun)
-    const fill = new THREE.DirectionalLight(0x3050a0, 1)
+    const fill = new THREE.DirectionalLight(0x998899, 0.8)
     fill.position.set(-3, 1, -2)
     scene.add(fill)
 
     const mat = new THREE.MeshStandardMaterial({
-      color: 0x4a6ad8,
+      color: DEFAULT_MESH_COLOR,
       roughness: 0.35,
       metalness: 0.1,
       side: THREE.DoubleSide,
     })
     const wireMat = new THREE.MeshBasicMaterial({
-      color: 0x8090e0,
+      color: 0xbb1045,
       wireframe: true,
       transparent: true,
       opacity: 0.18,
