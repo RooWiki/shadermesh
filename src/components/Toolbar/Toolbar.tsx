@@ -65,7 +65,7 @@ export function Toolbar() {
     <>
       <div className={styles.toolbar}>
         <div className={styles.brand}>
-          <img src="/logo.png" alt="Roowiki" className={styles.logo} />
+          <img src={theme === 'dark' ? '/logo-dark.png' : '/logo-light.png'} alt="Roowiki" className={styles.logo} />
           Roowiki
         </div>
 
