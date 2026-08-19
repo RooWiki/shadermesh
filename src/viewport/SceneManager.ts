@@ -107,6 +107,11 @@ export class SceneManager {
   private vertexPoints: THREE.Points | null = null
   private selectedVertexIndices: number[] = []
 
+  // Weld map: groups render vertices that share the same spatial position so the
+  // editor treats them as a single logical vertex.  One overlay point is shown per
+  // group; moving it moves all render vertices in the group together.
+  private weldMap: { groups: number[][], renderToGroup: Int32Array } | null = null
+
   // Face overlay (only for selected object in face mode)
   private faceHighlight: THREE.Mesh | null = null
   private selectedFaceIndices: number[] = []
@@ -521,13 +526,18 @@ export class SceneManager {
       raycaster.setFromCamera(this.getNDC(e), this.getActiveCamera())
       const hits = raycaster.intersectObject(this.vertexPoints, false)
       if (hits.length > 0) {
-        const idx = hits[0].index!
+        // hits[0].index = overlay point index = weld group index
+        const groupIdx = hits[0].index!
+        const representative = this.weldMap ? this.weldMap.groups[groupIdx][0] : groupIdx
         if (e.shiftKey) {
           const cur = this.selectedVertexIndices
-          const next = cur.includes(idx) ? cur.filter(i => i !== idx) : [...cur, idx]
+          const isSelected = cur.includes(representative)
+          const next = isSelected
+            ? cur.filter(v => v !== representative)
+            : [...cur, representative]
           this.onSelectVertices(next)
         } else {
-          this.onSelectVertices([idx])
+          this.onSelectVertices([representative])
         }
         return
       }
@@ -672,21 +682,32 @@ export class SceneManager {
     if (!obj || !mesh) return []
 
     const { positions } = obj.meshData
-    const count = positions.length / 3
     const result: number[] = []
-    const minX = Math.min(ndcX1, ndcX2)
-    const maxX = Math.max(ndcX1, ndcX2)
-    const minY = Math.min(ndcY1, ndcY2)
-    const maxY = Math.max(ndcY1, ndcY2)
+    const minX = Math.min(ndcX1, ndcX2), maxX = Math.max(ndcX1, ndcX2)
+    const minY = Math.min(ndcY1, ndcY2), maxY = Math.max(ndcY1, ndcY2)
 
     const v = new THREE.Vector3()
     const camera = this.getActiveCamera()
-    for (let i = 0; i < count; i++) {
-      v.set(positions[i*3], positions[i*3+1], positions[i*3+2])
-      v.applyMatrix4(mesh.matrixWorld)
-      v.project(camera)
-      if (v.z > 1) continue
-      if (v.x >= minX && v.x <= maxX && v.y >= minY && v.y <= maxY) result.push(i)
+
+    if (this.weldMap) {
+      // Test one representative per logical group; collect only that representative.
+      for (const group of this.weldMap.groups) {
+        const vi = group[0]
+        v.set(positions[vi * 3], positions[vi * 3 + 1], positions[vi * 3 + 2])
+        v.applyMatrix4(mesh.matrixWorld)
+        v.project(camera)
+        if (v.z > 1) continue
+        if (v.x >= minX && v.x <= maxX && v.y >= minY && v.y <= maxY) result.push(vi)
+      }
+    } else {
+      const count = positions.length / 3
+      for (let i = 0; i < count; i++) {
+        v.set(positions[i * 3], positions[i * 3 + 1], positions[i * 3 + 2])
+        v.applyMatrix4(mesh.matrixWorld)
+        v.project(camera)
+        if (v.z > 1) continue
+        if (v.x >= minX && v.x <= maxX && v.y >= minY && v.y <= maxY) result.push(i)
+      }
     }
     return result
   }
@@ -1056,7 +1077,7 @@ export class SceneManager {
   }
 
   private snapshotBaseVertexPositions() {
-    const vertexIndices = this.getSelectionVertexIndicesForMode()
+    const vertexIndices = this.getEffectiveVertexIndicesForTransform()
     if (vertexIndices.length === 0 || !this.selectedId) { this.baseVertexPositions = null; return }
     const obj = this.currentObjects.find(o => o.id === this.selectedId)
     if (!obj) { this.baseVertexPositions = null; return }
@@ -1074,7 +1095,7 @@ export class SceneManager {
     const obj = this.currentObjects.find(o => o.id === this.selectedId)
     const mesh = this.meshMap.get(this.selectedId)
     if (!obj || !mesh) return
-    const vertexIndices = this.getSelectionVertexIndicesForMode()
+    const vertexIndices = this.getEffectiveVertexIndicesForTransform()
     if (vertexIndices.length === 0) return
 
     this.selectionPivot.updateWorldMatrix(true, false)
@@ -1102,7 +1123,16 @@ export class SceneManager {
 
     if (this.vertexPoints) {
       const attr = this.vertexPoints.geometry.attributes.position as THREE.BufferAttribute
-      ;(attr.array as Float32Array).set(positions)
+      if (this.weldMap) {
+        // One overlay point per logical group — update from the representative render vertex.
+        const { groups } = this.weldMap
+        for (let gi = 0; gi < groups.length; gi++) {
+          const vi = groups[gi][0]
+          attr.setXYZ(gi, positions[vi * 3], positions[vi * 3 + 1], positions[vi * 3 + 2])
+        }
+      } else {
+        ;(attr.array as Float32Array).set(positions)
+      }
       attr.needsUpdate = true
     }
     if (this.currentMode === 'face' && this.selectedFaceIndices.length > 0) {
@@ -1225,6 +1255,59 @@ export class SceneManager {
     this.tangentLines = null
   }
 
+  // ── Logical weld map ─────────────────────────────────────────
+
+  // Groups render vertices that are spatially coincident (within WELD_EPSILON)
+  // into logical vertices.  O(n) via spatial hashing.
+  private buildWeldMap(positions: Float32Array): void {
+    const WELD_EPSILON = 1e-5
+    const INV = 1 / WELD_EPSILON
+    const count = positions.length / 3
+    const groups: number[][] = []
+    const renderToGroup = new Int32Array(count).fill(-1)
+    const hashMap = new Map<string, number>()
+
+    for (let v = 0; v < count; v++) {
+      const x = positions[v * 3], y = positions[v * 3 + 1], z = positions[v * 3 + 2]
+      const key = `${Math.round(x * INV)},${Math.round(y * INV)},${Math.round(z * INV)}`
+      let gi = hashMap.get(key)
+      if (gi === undefined) {
+        gi = groups.length
+        groups.push([v])
+        hashMap.set(key, gi)
+      } else {
+        groups[gi].push(v)
+      }
+      renderToGroup[v] = gi
+    }
+
+    this.weldMap = { groups, renderToGroup }
+  }
+
+  // Given a list of representative render-vertex indices (one per selected logical
+  // group), return the full set of render-vertex indices that should be moved.
+  private expandWithWeldMap(representatives: number[]): number[] {
+    if (!this.weldMap) return representatives
+    const { groups, renderToGroup } = this.weldMap
+    const seenGroups = new Set<number>()
+    const result: number[] = []
+    for (const vi of representatives) {
+      const gi = renderToGroup[vi]
+      if (gi === -1 || seenGroups.has(gi)) continue
+      seenGroups.add(gi)
+      for (const rv of groups[gi]) result.push(rv)
+    }
+    return result
+  }
+
+  // Returns the render-vertex indices that should actually be transformed.
+  // In vertex mode: expands selected representatives to all group members.
+  // In face mode: unchanged (face vertex indices).
+  private getEffectiveVertexIndicesForTransform(): number[] {
+    if (this.currentMode === 'vertex') return this.expandWithWeldMap(this.selectedVertexIndices)
+    return this.getSelectionVertexIndicesForMode()
+  }
+
   // ── Vertex overlay ───────────────────────────────────────────
 
   private buildVertexOverlay(meshData: MeshData) {
@@ -1233,15 +1316,24 @@ export class SceneManager {
     if (!mesh) return
 
     const positions = meshData.positions
-    const count = positions.length / 3
-    const colors = new Float32Array(count * 3)
+    this.buildWeldMap(positions)
+    const { groups } = this.weldMap!
+    const G = groups.length
+
+    // One point per logical group; use the first render vertex as representative.
+    const overlayPositions = new Float32Array(G * 3)
+    const colors = new Float32Array(G * 3)
     const [dr, dg, db] = VERTEX_COLOR_DEFAULT
-    for (let i = 0; i < count; i++) {
-      colors[i * 3] = dr; colors[i * 3 + 1] = dg; colors[i * 3 + 2] = db
+    for (let gi = 0; gi < G; gi++) {
+      const vi = groups[gi][0]
+      overlayPositions[gi * 3]     = positions[vi * 3]
+      overlayPositions[gi * 3 + 1] = positions[vi * 3 + 1]
+      overlayPositions[gi * 3 + 2] = positions[vi * 3 + 2]
+      colors[gi * 3] = dr; colors[gi * 3 + 1] = dg; colors[gi * 3 + 2] = db
     }
 
     const geo = new THREE.BufferGeometry()
-    geo.setAttribute('position', new THREE.BufferAttribute(positions.slice(), 3))
+    geo.setAttribute('position', new THREE.BufferAttribute(overlayPositions, 3))
     geo.setAttribute('color', new THREE.BufferAttribute(colors, 3))
 
     const mat = new THREE.PointsMaterial({
@@ -1261,6 +1353,7 @@ export class SceneManager {
     this.vertexPoints.geometry.dispose()
     ;(this.vertexPoints.material as THREE.PointsMaterial).dispose()
     this.vertexPoints = null
+    this.weldMap = null
   }
 
   private updateVertexHighlight() {
@@ -1271,9 +1364,18 @@ export class SceneManager {
     const [sr, sg, sb] = VERTEX_COLOR_SELECTED
     const selected = new Set(this.selectedVertexIndices)
 
-    for (let i = 0; i < count; i++) {
-      if (selected.has(i)) colors.setXYZ(i, sr, sg, sb)
-      else colors.setXYZ(i, dr, dg, db)
+    if (this.weldMap) {
+      const { groups } = this.weldMap
+      // Overlay point gi is selected when its representative (groups[gi][0]) is selected.
+      for (let gi = 0; gi < count; gi++) {
+        if (selected.has(groups[gi][0])) colors.setXYZ(gi, sr, sg, sb)
+        else colors.setXYZ(gi, dr, dg, db)
+      }
+    } else {
+      for (let i = 0; i < count; i++) {
+        if (selected.has(i)) colors.setXYZ(i, sr, sg, sb)
+        else colors.setXYZ(i, dr, dg, db)
+      }
     }
     colors.needsUpdate = true
   }
