@@ -1,0 +1,13 @@
+{
+  "name": "Roowiki",
+  "short_name": "Roowiki",
+  "description": "Mesh editor for creating and editing 2D and 3D shapes for shaders, VFX, and procedural workflows.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1C1C1E",
+  "theme_color": "#2C2C2E",
+  "icons": [
+    { "src": "/logo.png",       "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/logo-dark.png",  "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
