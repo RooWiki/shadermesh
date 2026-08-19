@@ -214,7 +214,7 @@ export class SceneManager {
     this.scene.add(new THREE.AxesHelper(0.5))
 
     this.defaultMat = new THREE.MeshPhongMaterial({ color: DEFAULT_MESH_COLOR, shininess: 18, specular: 0x553344 })
-    this.selectedMat = new THREE.MeshPhongMaterial({ color: 0x7aace0, emissive: 0x112233, emissiveIntensity: 0.3, shininess: 18, specular: 0x334466 })
+    this.selectedMat = new THREE.MeshPhongMaterial({ color: DEFAULT_MESH_COLOR, emissive: DEFAULT_MESH_COLOR, emissiveIntensity: 0.15, shininess: 24, specular: 0x553344 })
     this.vcMat = new THREE.MeshBasicMaterial({ vertexColors: true })
     this.uvCheckerTex = makeUVCheckerTexture()
     this.uvCheckerMat = new THREE.MeshBasicMaterial({ map: this.uvCheckerTex, side: THREE.DoubleSide })
