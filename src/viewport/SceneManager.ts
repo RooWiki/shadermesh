@@ -821,6 +821,14 @@ export class SceneManager {
 
     const { center, radius, dist } = this.computeFrameParams(mesh)
     const ctrl = this.getActiveControls()
+
+    // Flush any accumulated pan/rotation inertia so the position reset
+    // is not disturbed by pending panOffset/sphericalDelta from damping.
+    const wasDamping = ctrl.enableDamping
+    ctrl.enableDamping = false
+    ctrl.update()
+    ctrl.enableDamping = wasDamping
+
     ctrl.target.copy(center)
 
     if (this.activeViewport === 'persp') {
@@ -830,6 +838,13 @@ export class SceneManager {
       ctrl.update()
     } else {
       const cam = this.getActiveCamera() as THREE.OrthographicCamera
+      // Reset canonical camera position to eliminate pan-induced drift
+      const D = 100
+      switch (this.activeViewport) {
+        case 'front': cam.position.set(center.x, center.y, center.z + D); break
+        case 'right': cam.position.set(center.x + D, center.y, center.z); break
+        case 'top':   cam.position.set(center.x, center.y + D, center.z); break
+      }
       const frustumH = cam.top - cam.bottom
       cam.zoom = frustumH / Math.max(radius * 2.5, 0.1)
       cam.updateProjectionMatrix()
