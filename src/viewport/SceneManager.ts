@@ -636,9 +636,14 @@ export class SceneManager {
     this.updateGizmoAttachment()
     if (mode === 'vertex' && this.selectedId) {
       const obj = this.currentObjects.find(o => o.id === this.selectedId)
-      if (obj) this.buildVertexOverlay(obj.meshData)
+      if (obj) this.buildVertexOverlay(obj.meshData)  // also builds weld map
     } else {
-      this.clearVertexOverlay()
+      this.clearVertexOverlay()  // clears weld map
+      // Face mode needs the weld map even though it doesn't show vertex handles.
+      if (mode === 'face' && this.selectedId) {
+        const obj = this.currentObjects.find(o => o.id === this.selectedId)
+        if (obj) this.buildWeldMap(obj.meshData.positions)
+      }
     }
     if (mode !== 'face') {
       this.clearFaceHighlight()
@@ -939,6 +944,8 @@ export class SceneManager {
       if (this.currentMode === 'vertex') {
         this.buildVertexOverlay(obj.meshData)
         this.updateVertexHighlight()
+      } else if (this.currentMode === 'face') {
+        this.buildWeldMap(obj.meshData.positions)
       }
       if (this.currentMode === 'face' && this.selectedFaceIndices.length > 0) {
         const maxFace = obj.meshData.indices.length / 3
@@ -998,6 +1005,7 @@ export class SceneManager {
       }
       if (obj) {
         if (this.currentMode === 'vertex') this.buildVertexOverlay(obj.meshData)
+        else if (this.currentMode === 'face') this.buildWeldMap(obj.meshData.positions)
         if (this.showNormals) this.buildNormalOverlay(obj.meshData)
         if (this.showTangents) this.buildTangentOverlay(obj.meshData)
       }
@@ -1034,6 +1042,24 @@ export class SceneManager {
       const obj = this.currentObjects.find(o => o.id === this.selectedId)
       if (!obj) return []
       const { indices } = obj.meshData
+      if (this.weldMap) {
+        // Return one representative per logical group touched by the selected faces.
+        // This prevents duplicate-weighting in centroid / snapshot calculations.
+        const { renderToGroup, groups } = this.weldMap
+        const seenGroups = new Set<number>()
+        const result: number[] = []
+        for (const fi of this.selectedFaceIndices) {
+          for (let k = 0; k < 3; k++) {
+            const gi = renderToGroup[indices[fi * 3 + k]]
+            if (!seenGroups.has(gi)) {
+              seenGroups.add(gi)
+              result.push(groups[gi][0])
+            }
+          }
+        }
+        return result
+      }
+      // Fallback (weld map not yet built): unique raw render indices.
       const set = new Set<number>()
       for (const fi of this.selectedFaceIndices) {
         set.add(indices[fi*3])
@@ -1300,12 +1326,12 @@ export class SceneManager {
     return result
   }
 
-  // Returns the render-vertex indices that should actually be transformed.
-  // In vertex mode: expands selected representatives to all group members.
-  // In face mode: unchanged (face vertex indices).
+  // Returns the full set of render-vertex indices that must be moved together.
+  // getSelectionVertexIndicesForMode() returns one representative per logical group
+  // for both vertex and face mode; expandWithWeldMap() resolves each representative
+  // to every render vertex in its group so all duplicates move together.
   private getEffectiveVertexIndicesForTransform(): number[] {
-    if (this.currentMode === 'vertex') return this.expandWithWeldMap(this.selectedVertexIndices)
-    return this.getSelectionVertexIndicesForMode()
+    return this.expandWithWeldMap(this.getSelectionVertexIndicesForMode())
   }
 
   // ── Vertex overlay ───────────────────────────────────────────
