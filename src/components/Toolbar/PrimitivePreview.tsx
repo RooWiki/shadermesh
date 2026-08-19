@@ -2,12 +2,18 @@ import { useRef, useEffect } from 'react'
 import * as THREE from 'three'
 import type { MeshData } from '../../core/MeshData'
 import { meshDataToBufferGeometry } from '../../viewport/MeshRenderer'
-import { DEFAULT_MESH_COLOR } from '../../core/defaultMeshColor'
 import styles from './PrimitivePreview.module.css'
 
 interface Props {
   meshData: MeshData
   height?: number
+}
+
+function readMeshColor(fallback: number): number {
+  const val = getComputedStyle(document.documentElement)
+    .getPropertyValue('--viewport-mesh-color').trim()
+  if (!val) return fallback
+  try { return new THREE.Color(val).getHex() } catch { return fallback }
 }
 
 export function PrimitivePreview({ meshData, height = 140 }: Props) {
@@ -45,13 +51,13 @@ export function PrimitivePreview({ meshData, height = 140 }: Props) {
     scene.add(fill)
 
     const mat = new THREE.MeshStandardMaterial({
-      color: DEFAULT_MESH_COLOR,
+      color: readMeshColor(0xc7c7cc),
       roughness: 0.35,
       metalness: 0.1,
       side: THREE.DoubleSide,
     })
     const wireMat = new THREE.MeshBasicMaterial({
-      color: 0xbb1045,
+      color: 0x555555,
       wireframe: true,
       transparent: true,
       opacity: 0.18,
@@ -61,6 +67,14 @@ export function PrimitivePreview({ meshData, height = 140 }: Props) {
     const wire = new THREE.Mesh(new THREE.BufferGeometry(), wireMat)
     scene.add(mesh)
     scene.add(wire)
+
+    const themeObserver = new MutationObserver(() => {
+      mat.color.setHex(readMeshColor(0xc7c7cc))
+    })
+    themeObserver.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-theme'],
+    })
 
     let animId = 0
     const tick = () => {
@@ -75,6 +89,7 @@ export function PrimitivePreview({ meshData, height = 140 }: Props) {
 
     return () => {
       cancelAnimationFrame(animId)
+      themeObserver.disconnect()
       mat.dispose()
       wireMat.dispose()
       renderer.dispose()
