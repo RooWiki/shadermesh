@@ -80,7 +80,7 @@ export class SceneManager {
   private gridHelper: THREE.GridHelper
 
   private meshMap = new Map<string, THREE.Mesh>()
-  private meshMatMap = new Map<string, THREE.MeshPhongMaterial>()
+  private meshMatMap = new Map<string, THREE.MeshStandardMaterial>()
   private wireframeMap = new Map<string, THREE.LineSegments>()
   private meshDataRefMap = new Map<string, MeshData>()
 
@@ -125,8 +125,8 @@ export class SceneManager {
   private animFrameId = 0
   private container: HTMLDivElement
 
-  private defaultMat: THREE.MeshPhongMaterial
-  private selectedMat: THREE.MeshPhongMaterial
+  private defaultMat: THREE.MeshStandardMaterial
+  private selectedMat: THREE.MeshStandardMaterial
   private vcMat: THREE.MeshBasicMaterial
   private uvCheckerTex!: THREE.CanvasTexture
   private uvCheckerMat!: THREE.MeshBasicMaterial
@@ -167,6 +167,8 @@ export class SceneManager {
     this.renderer.setSize(w, h)
     this.renderer.shadowMap.enabled = true
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping
+    this.renderer.toneMappingExposure = 1.2
     container.appendChild(this.renderer.domElement)
 
     const aspect = (w / 2) / (h / 2)
@@ -198,23 +200,23 @@ export class SceneManager {
     this.rightCamera.position.set(100, 0, 0)
     this.rightCamera.lookAt(0, 0, 0)
 
-    const ambient = new THREE.AmbientLight(0xffffff, 0.6)
+    const ambient = new THREE.AmbientLight(0xffffff, 1.0)
     this.scene.add(ambient)
-    const dirLight = new THREE.DirectionalLight(0xffffff, 1.0)
-    dirLight.position.set(5, 8, 5)
+    const dirLight = new THREE.DirectionalLight(0xffffff, 3.0)
+    dirLight.position.set(3, 5, 4)
     dirLight.castShadow = true
     dirLight.shadow.mapSize.set(1024, 1024)
     this.scene.add(dirLight)
-    const fillLight = new THREE.DirectionalLight(0x8888ff, 0.3)
-    fillLight.position.set(-5, -2, -5)
+    const fillLight = new THREE.DirectionalLight(0x998899, 0.8)
+    fillLight.position.set(-3, 1, -2)
     this.scene.add(fillLight)
 
     this.gridHelper = new THREE.GridHelper(20, 20, 0x484848, 0x363636)
     this.scene.add(this.gridHelper)
     this.scene.add(new THREE.AxesHelper(0.5))
 
-    this.defaultMat = new THREE.MeshPhongMaterial({ color: DEFAULT_MESH_COLOR, shininess: 18, specular: 0x553344 })
-    this.selectedMat = new THREE.MeshPhongMaterial({ color: DEFAULT_MESH_COLOR, emissive: DEFAULT_MESH_COLOR, emissiveIntensity: 0.15, shininess: 24, specular: 0x553344 })
+    this.defaultMat = new THREE.MeshStandardMaterial({ color: DEFAULT_MESH_COLOR, roughness: 0.35, metalness: 0.1 })
+    this.selectedMat = new THREE.MeshStandardMaterial({ color: DEFAULT_MESH_COLOR, emissive: DEFAULT_MESH_COLOR, emissiveIntensity: 0.15, roughness: 0.35, metalness: 0.1 })
     this.vcMat = new THREE.MeshBasicMaterial({ vertexColors: true })
     this.uvCheckerTex = makeUVCheckerTexture()
     this.uvCheckerMat = new THREE.MeshBasicMaterial({ map: this.uvCheckerTex, side: THREE.DoubleSide })
