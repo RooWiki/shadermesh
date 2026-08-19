@@ -12,7 +12,7 @@ function safeName(name: string): string {
 export function exportOBJ(meshData: MeshData, name: string): string {
   const { positions, normals, uvs, indices } = meshData
   const grp = safeName(name)
-  const lines: string[] = [`# ShaderMesh - ${name}`, `g ${grp}`, '']
+  const lines: string[] = [`# Roowiki - ${name}`, `g ${grp}`, '']
 
   const vCount = positions.length / 3
   for (let i = 0; i < vCount; i++)

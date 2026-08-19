@@ -2,10 +2,15 @@ import { useState, useEffect, useCallback } from 'react'
 
 type Theme = 'dark' | 'light'
 
-const STORAGE_KEY = 'shadermesh-theme'
+const STORAGE_KEY = 'roowiki-theme'
+const LEGACY_KEY  = 'shadermesh-theme'
 
 function getInitialTheme(): Theme {
   try {
+    if (!localStorage.getItem(STORAGE_KEY)) {
+      const old = localStorage.getItem(LEGACY_KEY)
+      if (old === 'dark' || old === 'light') localStorage.setItem(STORAGE_KEY, old)
+    }
     const stored = localStorage.getItem(STORAGE_KEY) as Theme | null
     if (stored === 'dark' || stored === 'light') return stored
   } catch { /* ignore */ }

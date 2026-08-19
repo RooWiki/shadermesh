@@ -65,8 +65,8 @@ export function Toolbar() {
     <>
       <div className={styles.toolbar}>
         <div className={styles.brand}>
-          <img src="/logo.png" alt="ShaderMesh" className={styles.logo} />
-          ShaderMesh
+          <img src="/logo.png" alt="Roowiki" className={styles.logo} />
+          Roowiki
         </div>
 
         <div className={styles.divider} />

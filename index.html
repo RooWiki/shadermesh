@@ -4,11 +4,17 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="/logo.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ShaderMesh</title>
+    <title>Roowiki</title>
     <script>
       (function() {
         var t;
-        try { t = localStorage.getItem('shadermesh-theme'); } catch(e) {}
+        try {
+          t = localStorage.getItem('roowiki-theme');
+          if (!t) {
+            var old = localStorage.getItem('shadermesh-theme');
+            if (old === 'dark' || old === 'light') { t = old; localStorage.setItem('roowiki-theme', t); }
+          }
+        } catch(e) {}
         if (t !== 'dark' && t !== 'light') {
           t = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
         }

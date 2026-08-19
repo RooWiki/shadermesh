@@ -1,13 +1,13 @@
-# ShaderMesh
+# Roowiki
 
 A browser-based mesh editor for Technical Artists to inspect and edit 3D mesh data before applying shaders.
 
 <img width="2560" height="1440" alt="2026-08-16_22-57-21" src="https://github.com/user-attachments/assets/eb469a50-2aa9-4d09-b0c0-bca549b68db7" />
 
 
-## What is ShaderMesh?
+## What is Roowiki?
 
-ShaderMesh makes the relationship between mesh data and shaders visible and editable:
+Roowiki makes the relationship between mesh data and shaders visible and editable:
 
 ```
 MESH
@@ -104,7 +104,7 @@ Shift+click adds to / removes from the selection. Alt+drag orbits without desele
 ### Import / Export
 
 - **OBJ** — import and export standard Wavefront OBJ
-- **JSON** — ShaderMesh native format (preserves all attributes including tangents and vertex colors)
+- **JSON** — Roowiki native format (preserves all attributes including tangents and vertex colors)
 
 ### Undo / Redo
 
