@@ -187,7 +187,7 @@ export function createTruncatedPyramid(p: Record<string, number> = {}): MeshData
     pos.push(bx0, -halfH, bz0, bx1, -halfH, bz1, tx1, halfH, tz1, tx0, halfH, tz0)
     for (let v = 0; v < 4; v++) nrm.push(nx, ny, nz)
     uvArr.push(0, 0, 1, 0, 1, 1, 0, 1)
-    idx.push(b, b + 1, b + 2, b, b + 2, b + 3)
+    idx.push(b, b + 2, b + 1, b, b + 3, b + 2)
   }
 
   // Top cap
