@@ -920,7 +920,10 @@ export class SceneManager {
         this.updateVertexHighlight()
       }
       if (this.currentMode === 'face' && this.selectedFaceIndices.length > 0) {
-        this.buildFaceHighlight(obj.meshData, this.selectedFaceIndices)
+        const maxFace = obj.meshData.indices.length / 3
+        const validFaces = this.selectedFaceIndices.filter(fi => fi < maxFace)
+        if (validFaces.length > 0) this.buildFaceHighlight(obj.meshData, validFaces)
+        else this.clearFaceHighlight()
       }
       if (this.showNormals) this.buildNormalOverlay(obj.meshData)
       if (this.showTangents) this.buildTangentOverlay(obj.meshData)

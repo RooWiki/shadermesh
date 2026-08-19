@@ -19,19 +19,30 @@ function useGlobalShortcuts() {
   const undo = useSceneStore(s => s.undo)
   const redo = useSceneStore(s => s.redo)
   useEffect(() => {
+    const isEditableTarget = (t: EventTarget | null) => {
+      if (!t) return false
+      const el = t as HTMLElement
+      return el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable
+    }
     const onKey = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.code === 'KeyZ') {
-        if (e.target instanceof HTMLInputElement) return
+        if (isEditableTarget(e.target)) return
         e.preventDefault()
         if (e.shiftKey) redo(); else undo()
         return
       }
-      if (e.target instanceof HTMLInputElement) return
+      if (isEditableTarget(e.target)) return
       switch (e.key) {
         case 'Escape': selectObject(null); break
         case 'Delete': case 'Backspace': {
-          const id = useSceneStore.getState().selectedObjectId
-          if (id) removeObject(id)
+          const state = useSceneStore.getState()
+          if (state.editorMode === 'face') {
+            if (state.selectedFaceIndices.length > 0 && state.selectedObjectId) {
+              state.deleteFaces(state.selectedObjectId, state.selectedFaceIndices)
+            }
+          } else if (state.editorMode === 'object' && state.selectedObjectId) {
+            removeObject(state.selectedObjectId)
+          }
           break
         }
         case 'q': case 'Q': setActiveTool('select'); break
