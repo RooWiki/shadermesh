@@ -5,7 +5,6 @@ import type { MeshObject } from '../core/MeshObject'
 import type { MeshData } from '../core/MeshData'
 import type { ActiveTool, EditorMode, WireframeMode } from '../state/sceneStore'
 import { meshDataToBufferGeometry } from './MeshRenderer'
-import { DEFAULT_MESH_COLOR } from '../core/defaultMeshColor'
 
 type SelectCallback = (id: string | null) => void
 type SelectVerticesCallback = (indices: number[]) => void
@@ -137,8 +136,9 @@ export class SceneManager {
   private showVertexColors = false
 
   // Theme-driven colors (updated via MutationObserver on data-theme)
-  private viewportBgHex = 0x2c2c2e
-  private gizmoBgHex    = 0x3a3a3c
+  private viewportBgHex    = 0x2c2c2e
+  private gizmoBgHex       = 0x3a3a3c
+  private sceneMeshColorHex = 0xc7c7cc   // dark-theme fallback, overridden by initThemeObserver
   private themeObserver: MutationObserver | null = null
 
   constructor(
@@ -215,12 +215,13 @@ export class SceneManager {
     this.scene.add(this.gridHelper)
     this.scene.add(new THREE.AxesHelper(0.5))
 
-    this.defaultMat = new THREE.MeshStandardMaterial({ color: DEFAULT_MESH_COLOR, roughness: 0.35, metalness: 0.1 })
-    this.selectedMat = new THREE.MeshStandardMaterial({ color: DEFAULT_MESH_COLOR, emissive: DEFAULT_MESH_COLOR, emissiveIntensity: 0.15, roughness: 0.35, metalness: 0.1 })
+    // Colors are set immediately by initThemeObserver → update()
+    this.defaultMat = new THREE.MeshStandardMaterial({ color: 0xc7c7cc, roughness: 0.35, metalness: 0.1 })
+    this.selectedMat = new THREE.MeshStandardMaterial({ color: 0xc7c7cc, emissive: 0xc7c7cc, emissiveIntensity: 0.15, roughness: 0.35, metalness: 0.1 })
     this.vcMat = new THREE.MeshBasicMaterial({ vertexColors: true })
     this.uvCheckerTex = makeUVCheckerTexture()
     this.uvCheckerMat = new THREE.MeshBasicMaterial({ map: this.uvCheckerTex, side: THREE.DoubleSide })
-    this.wireframeMat = new THREE.LineBasicMaterial({ color: 0xbb1045, transparent: true, opacity: 0.4 })
+    this.wireframeMat = new THREE.LineBasicMaterial({ color: 0x555555, transparent: true, opacity: 0.4 })
     this.selectedWireframeMat = new THREE.LineBasicMaterial({ color: 0xf0a050, transparent: true, opacity: 0.8 })
     this.faceHighlightMat = new THREE.MeshBasicMaterial({
       color: 0xff8800,
@@ -363,6 +364,16 @@ export class SceneManager {
       this.gridHelper = new THREE.GridHelper(20, 20, gridMain, gridSub)
       this.gridHelper.visible = wasVisible
       this.scene.add(this.gridHelper)
+
+      // Update default mesh color from theme token
+      this.sceneMeshColorHex = this.parseCSSHex('--viewport-mesh-color', 0xc7c7cc)
+      this.defaultMat.color.setHex(this.sceneMeshColorHex)
+      this.selectedMat.color.setHex(this.sceneMeshColorHex)
+      this.selectedMat.emissive.setHex(this.sceneMeshColorHex)
+      for (const [id, mat] of this.meshMatMap) {
+        mat.color.setHex(this.sceneMeshColorHex)
+        if (id === this.selectedId) mat.emissive.setHex(this.sceneMeshColorHex)
+      }
     }
     update()
     this.themeObserver = new MutationObserver(update)

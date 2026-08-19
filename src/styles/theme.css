@@ -118,6 +118,7 @@
   --gizmo-bg:            #3A3A3C;
   --viewport-grid-main:  #484848;
   --viewport-grid-sub:   #363636;
+  --viewport-mesh-color: #C7C7CC;
 }
 
 /* iOS systemGray palette — Light theme */
@@ -225,4 +226,5 @@
   --gizmo-bg:            #C7C7CC;
   --viewport-grid-main:  #AEAEB2;
   --viewport-grid-sub:   #C7C7CC;
+  --viewport-mesh-color: #48484A;
 }
