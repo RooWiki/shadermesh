@@ -343,24 +343,25 @@ export function AddObjectModal({ onClose }: AddObjectModalProps) {
   return (
     <div className={styles.overlay}>
       <div className={styles.modal}>
-        <div className={styles.title}>Add Object</div>
 
-        {/* Main tabs */}
-        <div className={styles.tabRow}>
-          <button className={`${styles.tabBtn} ${tab === '2d' ? styles.tabBtnActive : ''}`} onClick={() => setTab('2d')}>2D Shapes</button>
-          <button className={`${styles.tabBtn} ${tab === '3d' ? styles.tabBtnActive : ''}`} onClick={() => setTab('3d')}>3D Primitives</button>
+        {/* Left: full-height preview panel */}
+        <div className={styles.previewPanel}>
+          {previewMeshData && <PrimitivePreview meshData={previewMeshData} />}
         </div>
 
-        {/* Two-column layout: preview left, controls right */}
-        <div className={styles.twoCol}>
-          <div className={styles.previewCol}>
-            {previewMeshData && <PrimitivePreview meshData={previewMeshData} height={260} />}
+        {/* Right: controls panel */}
+        <div className={styles.controlPanel}>
+          <div className={styles.controlHead}>
+            <div className={styles.title}>Add Object</div>
+            <div className={styles.tabRow}>
+              <button className={`${styles.tabBtn} ${tab === '2d' ? styles.tabBtnActive : ''}`} onClick={() => setTab('2d')}>2D Shapes</button>
+              <button className={`${styles.tabBtn} ${tab === '3d' ? styles.tabBtnActive : ''}`} onClick={() => setTab('3d')}>3D Primitives</button>
+            </div>
           </div>
 
-          <div className={styles.controlCol}>
+          <div className={styles.scrollArea}>
             {tab === '3d' && (
               <>
-                {/* Category tabs */}
                 <div className={styles.catRow}>
                   {CATEGORIES_3D.map(cat => (
                     <button
@@ -373,7 +374,6 @@ export function AddObjectModal({ onClose }: AddObjectModalProps) {
                   ))}
                 </div>
 
-                {/* Shape grid */}
                 <div className={styles.shapeGrid}>
                   {TYPES_BY_CATEGORY_3D[prim3DCategory].map(t => (
                     <button
@@ -386,7 +386,6 @@ export function AddObjectModal({ onClose }: AddObjectModalProps) {
                   ))}
                 </div>
 
-                {/* Dynamic fields */}
                 <div className={styles.fields}>
                   {PRIMITIVE_3D_REGISTRY[prim3DType].fields.map(fd => {
                     const val = prim3DParams[fd.key] ?? fd.default
@@ -465,25 +464,26 @@ export function AddObjectModal({ onClose }: AddObjectModalProps) {
               </>
             )}
           </div>
+
+          <div className={styles.controlFoot}>
+            <div className={styles.nameRow}>
+              <span className={styles.nameLabel}>Name</span>
+              <input
+                className={styles.nameInput}
+                type="text"
+                placeholder={namePlaceholder}
+                value={objectName}
+                onChange={e => setObjectName(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') handleAdd() }}
+              />
+            </div>
+            <div className={styles.actions}>
+              <button className={styles.cancelBtn} onClick={onClose}>Cancel</button>
+              <button className={styles.addBtn} onClick={handleAdd}>Add</button>
+            </div>
+          </div>
         </div>
 
-        {/* Name field */}
-        <div className={styles.nameRow}>
-          <span className={styles.nameLabel}>Name</span>
-          <input
-            className={styles.nameInput}
-            type="text"
-            placeholder={namePlaceholder}
-            value={objectName}
-            onChange={e => setObjectName(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter') handleAdd() }}
-          />
-        </div>
-
-        <div className={styles.actions}>
-          <button className={styles.cancelBtn} onClick={onClose}>Cancel</button>
-          <button className={styles.addBtn} onClick={handleAdd}>Add</button>
-        </div>
       </div>
     </div>
   )

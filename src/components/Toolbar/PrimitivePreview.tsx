@@ -6,7 +6,6 @@ import styles from './PrimitivePreview.module.css'
 
 interface Props {
   meshData: MeshData
-  height?: number
 }
 
 function readMeshColor(fallback: number): number {
@@ -16,7 +15,7 @@ function readMeshColor(fallback: number): number {
   try { return new THREE.Color(val).getHex() } catch { return fallback }
 }
 
-export function PrimitivePreview({ meshData, height = 140 }: Props) {
+export function PrimitivePreview({ meshData }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const threeRef = useRef<{
     renderer: THREE.WebGLRenderer
@@ -29,8 +28,8 @@ export function PrimitivePreview({ meshData, height = 140 }: Props) {
 
   useEffect(() => {
     const canvas = canvasRef.current!
-    const w = canvas.offsetWidth || 240
-    const h = height
+    const w = canvas.offsetWidth || 300
+    const h = canvas.offsetHeight || 300
 
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true })
     renderer.setSize(w, h, false)
@@ -76,6 +75,19 @@ export function PrimitivePreview({ meshData, height = 140 }: Props) {
       attributeFilter: ['data-theme'],
     })
 
+    const ro = new ResizeObserver(entries => {
+      const entry = entries[0]
+      if (!entry) return
+      const w2 = entry.contentRect.width
+      const h2 = entry.contentRect.height
+      if (w2 > 0 && h2 > 0) {
+        renderer.setSize(w2, h2, false)
+        camera.aspect = w2 / h2
+        camera.updateProjectionMatrix()
+      }
+    })
+    ro.observe(canvas)
+
     let animId = 0
     const tick = () => {
       animId = requestAnimationFrame(tick)
@@ -89,6 +101,7 @@ export function PrimitivePreview({ meshData, height = 140 }: Props) {
 
     return () => {
       cancelAnimationFrame(animId)
+      ro.disconnect()
       themeObserver.disconnect()
       mat.dispose()
       wireMat.dispose()
@@ -137,5 +150,5 @@ export function PrimitivePreview({ meshData, height = 140 }: Props) {
     t.camera.updateProjectionMatrix()
   }, [meshData])
 
-  return <canvas ref={canvasRef} className={styles.canvas} style={{ height }} />
+  return <canvas ref={canvasRef} className={styles.canvas} />
 }
