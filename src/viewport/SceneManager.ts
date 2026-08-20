@@ -6,6 +6,9 @@ import type { MeshData } from '../core/MeshData'
 import type { ActiveTool, EditorMode, WireframeMode } from '../state/sceneStore'
 import { meshDataToBufferGeometry } from './MeshRenderer'
 
+// Set to true to log NDC values for every pick — remove after confirming correctness
+const DEBUG_PICKING = true
+
 type SelectCallback = (id: string | null) => void
 type SelectVerticesCallback = (indices: number[]) => void
 type SelectFacesCallback = (indices: number[]) => void
@@ -387,11 +390,11 @@ export class SceneManager {
 
   private resizeObserver: ResizeObserver
 
-  private onResize = () => {
-    const { clientWidth: w, clientHeight: h } = this.container
-    if (w === 0 || h === 0) return
-    const hw = Math.floor(w / 2), hh = Math.floor(h / 2)
-    const aspect = hw / hh
+  private updateCameraProjections(w: number, h: number) {
+    // In fullscreen the active camera spans the whole canvas; in quad each panel is half.
+    const aspect = this.maximizedPanel
+      ? w / h
+      : Math.floor(w / 2) / Math.floor(h / 2)
 
     this.perspCamera.aspect = aspect
     this.perspCamera.updateProjectionMatrix()
@@ -402,8 +405,13 @@ export class SceneManager {
       // top/bottom stay at ±ORTHO_SIZE; zoom handles effective scale
       cam.updateProjectionMatrix()
     }
+  }
 
+  private onResize = () => {
+    const { clientWidth: w, clientHeight: h } = this.container
+    if (w === 0 || h === 0) return
     this.renderer.setSize(w, h)
+    this.updateCameraProjections(w, h)
   }
 
   private pointerMoved = false
@@ -477,6 +485,7 @@ export class SceneManager {
     if (e.button !== 0) return
     if (e.altKey) return
     if (this.gizmoDragActive) return
+    if (DEBUG_PICKING) console.log('[onPointerUp]', `mode=${this.currentMode}`, `maximizedPanel=${this.maximizedPanel}`, `activeViewport=${this.activeViewport}`)
     if (this.currentMode === 'vertex') {
       this.pickVertex(e)
     } else if (this.currentMode === 'face') {
@@ -486,25 +495,51 @@ export class SceneManager {
     }
   }
 
-  // NDC computed within the active panel (each panel maps to [-1,1]x[-1,1])
-  private getNDC(e: PointerEvent): THREE.Vector2 {
+  // Single source of truth: client coords → NDC for the active panel.
+  // Used by all picking systems (object, vertex, face) and exposed for box-select.
+  clientToNDC(clientX: number, clientY: number): THREE.Vector2 {
     const rect = this.renderer.domElement.getBoundingClientRect()
-    const x = e.clientX - rect.left
-    const y = e.clientY - rect.top
+    const x = clientX - rect.left
+    const y = clientY - rect.top
+    let ndc: THREE.Vector2
+
     if (this.maximizedPanel) {
-      return new THREE.Vector2(
-        (x / rect.width) * 2 - 1,
+      // Fullscreen: ignore quad layout entirely, use real render area
+      ndc = new THREE.Vector2(
+        (x / rect.width)  * 2 - 1,
         -(y / rect.height) * 2 + 1,
       )
+      if (DEBUG_PICKING) {
+        console.log('[picking] mode=fullscreen', this.maximizedPanel,
+          `client=(${clientX.toFixed(0)},${clientY.toFixed(0)})`,
+          `rect=[${rect.left.toFixed(0)},${rect.top.toFixed(0)} ${rect.width.toFixed(0)}×${rect.height.toFixed(0)}]`,
+          `local=(${x.toFixed(1)},${y.toFixed(1)})`,
+          `NDC=(${ndc.x.toFixed(3)},${ndc.y.toFixed(3)})`,
+        )
+      }
+    } else {
+      // Quad: map within the active panel (each quadrant maps to [-1,1]×[-1,1])
+      const hw = rect.width  / 2
+      const hh = rect.height / 2
+      const panelLeft = (this.activeViewport === 'persp' || this.activeViewport === 'right') ? hw : 0
+      const panelTop  = (this.activeViewport === 'front' || this.activeViewport === 'right') ? hh : 0
+      ndc = new THREE.Vector2(
+        ((x - panelLeft) / hw) * 2 - 1,
+        -((y - panelTop)  / hh) * 2 + 1,
+      )
+      if (DEBUG_PICKING) {
+        console.log('[picking] mode=quad', this.activeViewport,
+          `client=(${clientX.toFixed(0)},${clientY.toFixed(0)})`,
+          `panel=[${panelLeft.toFixed(0)},${panelTop.toFixed(0)} ${hw.toFixed(0)}×${hh.toFixed(0)}]`,
+          `NDC=(${ndc.x.toFixed(3)},${ndc.y.toFixed(3)})`,
+        )
+      }
     }
-    const hw = rect.width / 2
-    const hh = rect.height / 2
-    const panelLeft = (this.activeViewport === 'persp' || this.activeViewport === 'right') ? hw : 0
-    const panelTop  = (this.activeViewport === 'front' || this.activeViewport === 'right') ? hh : 0
-    return new THREE.Vector2(
-      ((x - panelLeft) / hw) * 2 - 1,
-      -((y - panelTop) / hh) * 2 + 1,
-    )
+    return ndc
+  }
+
+  private getNDC(e: PointerEvent): THREE.Vector2 {
+    return this.clientToNDC(e.clientX, e.clientY)
   }
 
   private pickObject(e: PointerEvent) {
@@ -521,10 +556,25 @@ export class SceneManager {
 
   private pickVertex(e: PointerEvent) {
     if (this.vertexPoints && this.selectedId) {
+      const ndc = this.getNDC(e)
+      const cam = this.getActiveCamera()
+      if (DEBUG_PICKING) {
+        const rect = this.renderer.domElement.getBoundingClientRect()
+        console.log('[pickVertex]',
+          `maximizedPanel=${this.maximizedPanel}`,
+          `activeViewport=${this.activeViewport}`,
+          `client=(${e.clientX.toFixed(0)},${e.clientY.toFixed(0)})`,
+          `rect=[${rect.left.toFixed(0)},${rect.top.toFixed(0)} ${rect.width.toFixed(0)}×${rect.height.toFixed(0)}]`,
+          `NDC=(${ndc.x.toFixed(3)},${ndc.y.toFixed(3)})`,
+          `cam=${cam === this.perspCamera ? 'persp' : cam === this.topCamera ? 'top' : cam === this.frontCamera ? 'front' : 'right'}`,
+          `cam.aspect=${(cam as any).aspect ?? 'ortho'}`,
+        )
+      }
       const raycaster = new THREE.Raycaster()
       raycaster.params.Points = { threshold: 0.08 }
-      raycaster.setFromCamera(this.getNDC(e), this.getActiveCamera())
+      raycaster.setFromCamera(ndc, cam)
       const hits = raycaster.intersectObject(this.vertexPoints, false)
+      if (DEBUG_PICKING) console.log(`[pickVertex] hits=${hits.length}`, hits[0] ? `idx=${hits[0].index} dist=${hits[0].distance.toFixed(3)}` : '')
       if (hits.length > 0) {
         // hits[0].index = overlay point index = weld group index
         const groupIdx = hits[0].index!
@@ -551,9 +601,23 @@ export class SceneManager {
     if (this.selectedId) {
       const mesh = this.meshMap.get(this.selectedId)
       if (mesh) {
+        const ndc = this.getNDC(e)
+        const cam = this.getActiveCamera()
+        if (DEBUG_PICKING) {
+          const rect = this.renderer.domElement.getBoundingClientRect()
+          console.log('[pickFace]',
+            `maximizedPanel=${this.maximizedPanel}`,
+            `activeViewport=${this.activeViewport}`,
+            `client=(${e.clientX.toFixed(0)},${e.clientY.toFixed(0)})`,
+            `rect=[${rect.left.toFixed(0)},${rect.top.toFixed(0)} ${rect.width.toFixed(0)}×${rect.height.toFixed(0)}]`,
+            `NDC=(${ndc.x.toFixed(3)},${ndc.y.toFixed(3)})`,
+            `cam=${cam === this.perspCamera ? 'persp' : cam === this.topCamera ? 'top' : cam === this.frontCamera ? 'front' : 'right'}`,
+          )
+        }
         const raycaster = new THREE.Raycaster()
-        raycaster.setFromCamera(this.getNDC(e), this.getActiveCamera())
+        raycaster.setFromCamera(ndc, cam)
         const hits = raycaster.intersectObject(mesh, false)
+        if (DEBUG_PICKING) console.log(`[pickFace] hits=${hits.length}`, hits[0] ? `faceIdx=${hits[0].faceIndex}` : '')
         if (hits.length > 0 && hits[0].faceIndex != null) {
           const idx = hits[0].faceIndex
           if (e.shiftKey) {
@@ -583,6 +647,7 @@ export class SceneManager {
 
   setMaximizedPanel(vp: ViewportId | null) {
     this.maximizedPanel = vp
+    const { clientWidth: w, clientHeight: h } = this.container
     if (vp) {
       this.activeViewport = vp
       this.perspControls.enabled  = vp === 'persp'
@@ -590,6 +655,16 @@ export class SceneManager {
       this.frontControls.enabled  = vp === 'front'
       this.rightControls.enabled  = vp === 'right'
       this.transformControls.camera = this.getActiveCamera()
+    }
+    // Recalculate projection matrices: fullscreen uses w/h, quad uses (w/2)/(h/2)
+    this.updateCameraProjections(w, h)
+    if (DEBUG_PICKING) {
+      const aspect = this.maximizedPanel ? w / h : Math.floor(w / 2) / Math.floor(h / 2)
+      console.log('[setMaximizedPanel]', `maximizedPanel=${this.maximizedPanel}`,
+        `activeViewport=${this.activeViewport}`,
+        `canvas=${w}×${h}`,
+        `aspect=${aspect.toFixed(4)} (${this.maximizedPanel ? 'fullscreen' : 'quad'})`,
+      )
     }
   }
 

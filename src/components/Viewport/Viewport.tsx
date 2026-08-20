@@ -122,36 +122,23 @@ export function Viewport() {
     return () => el.removeEventListener('contextmenu', prevent, { capture: true })
   }, [])
 
-  // Right-click box-select in vertex/face mode — panel-aware NDC
+  // Right-click box-select in vertex/face mode
+  // NDC is delegated entirely to SceneManager.clientToNDC — single source of truth for
+  // viewport layout (fullscreen vs quad). No panel-offset math lives here.
   useEffect(() => {
     const el = containerRef.current
     if (!el) return
 
-    type PanelId = 'top' | 'persp' | 'front' | 'right'
     let start: { x: number; y: number } | null = null
-    let startPanel: PanelId = 'persp'
     let moved = false
     let isShift = false
     let currentBox: { x: number; y: number; w: number; h: number } | null = null
-
-    const getPanelFromPointer = (cx: number, cy: number, rect: DOMRect): PanelId => {
-      const rx = cx - rect.left
-      const ry = cy - rect.top
-      const left = rx < rect.width / 2
-      const top  = ry < rect.height / 2
-      if (top  && left)  return 'top'
-      if (top  && !left) return 'persp'
-      if (!top && left)  return 'front'
-      return 'right'
-    }
 
     const onDown = (e: PointerEvent) => {
       if (e.button !== 2 || (editorMode !== 'vertex' && editorMode !== 'face')) return
       e.preventDefault()
       e.stopPropagation()
       isShift = e.shiftKey
-      const rect = el.getBoundingClientRect()
-      startPanel = getPanelFromPointer(e.clientX, e.clientY, rect)
       start = { x: e.clientX, y: e.clientY }
       moved = false
       currentBox = null
@@ -181,22 +168,16 @@ export function Viewport() {
 
       if (!moved) return
 
-      const rect = el.getBoundingClientRect()
-      // NDC within the panel that started the drag
-      const panelLeft = (startPanel === 'persp' || startPanel === 'right') ? rect.left + rect.width / 2 : rect.left
-      const panelTop  = (startPanel === 'front' || startPanel === 'right') ? rect.top + rect.height / 2 : rect.top
-      const panelW = rect.width / 2
-      const panelH = rect.height / 2
+      const sm = sceneManagerRef.current
+      if (!sm) return
 
-      const toNDC = (cx: number, cy: number) => ({
-        x: ((cx - panelLeft) / panelW) * 2 - 1,
-        y: -((cy - panelTop) / panelH) * 2 + 1,
-      })
-      const p1 = toNDC(s.x, s.y)
-      const p2 = toNDC(e.clientX, e.clientY)
+      // SceneManager.clientToNDC is the single source of truth: it knows whether we are
+      // in fullscreen (uses full canvas rect) or quad (uses the active panel rect).
+      const p1 = sm.clientToNDC(s.x, s.y)
+      const p2 = sm.clientToNDC(e.clientX, e.clientY)
 
       if (editorMode === 'vertex') {
-        const hit = sceneManagerRef.current?.getVerticesInBox(p1.x, p1.y, p2.x, p2.y) ?? []
+        const hit = sm.getVerticesInBox(p1.x, p1.y, p2.x, p2.y)
         if (isShift) {
           const merged = Array.from(new Set([...selectionRef.current.vertices, ...hit]))
           selectVertices(merged)
@@ -204,7 +185,7 @@ export function Viewport() {
           selectVertices(hit)
         }
       } else {
-        const hit = sceneManagerRef.current?.getFacesInBox(p1.x, p1.y, p2.x, p2.y) ?? []
+        const hit = sm.getFacesInBox(p1.x, p1.y, p2.x, p2.y)
         if (isShift) {
           const merged = Array.from(new Set([...selectionRef.current.faces, ...hit]))
           selectFaces(merged)
