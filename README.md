@@ -57,11 +57,25 @@ It is not a replacement for Blender or Maya. It is a lightweight, purpose-built 
 
 ## Preview
 
-<img width="2560" height="1440" alt="Roowiki editor — main view" src="https://github.com/user-attachments/assets/eb469a50-2aa9-4d09-b0c0-bca549b68db7" />
+**Main editor — ring selected, Inspector showing mesh data, UV Map panel, and UV layout viewer**
 
-<!-- Add Object modal screenshot — shows 2D/3D primitive library with live preview -->
-<!-- Vertex/Face editing screenshot — shows weld-aware sub-object transform -->
-<!-- UV panel screenshot — projection types and UV Viewer -->
+![Main editor with ring selected](docs/screenshots/02-main-editor-selected.png)
+
+**Add Object modal — 3D Primitives / VFX category with live preview**
+
+![Add Object — VFX Crystal](docs/screenshots/01-add-object-vfx.png)
+
+**Vertex Mode — logical vertex points displayed on the ring mesh**
+
+![Vertex Mode](docs/screenshots/03-vertex-mode.png)
+
+**UV Checker — checker texture on Ring and Torus across all four viewports**
+
+![UV Checker](docs/screenshots/04-uv-checker.png)
+
+**Normal vectors overlay — ring and torus with normal direction lines**
+
+![Normals overlay](docs/screenshots/05-normals-inspector.png)
 
 ---
 
